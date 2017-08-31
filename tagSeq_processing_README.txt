@@ -332,3 +332,4 @@ scp mstudiva@koko-login.fau.edu:~/tagseq/*.txt .
 # to your local directory)
 
 # DONE! Next, we will be using R to make sense of the counts...
+# BUT FIRST, read tagSeq_analysis_README.txt for the next steps
