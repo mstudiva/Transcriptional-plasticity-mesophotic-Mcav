@@ -156,7 +156,7 @@ cd ~/tagseq/
 
 # creating and launching a cluster job to unzip all files:
 ls *.gz | perl -pe 's/(\S+)/gunzip $1/' >gunz
-launcher_creator.py -j gunz -n gunz -q shortq7 -t 2:00:00 -N 20 -e mstudiva@fau.edu
+launcher_creator.py -j gunz -n gunz -q shortq7 -t 2:00:00 -e mstudiva@fau.edu
 sbatch gunz.slurm
 
 # check status of your job (qw : in queue; r : running; nothing printed on the screen - complete) 
