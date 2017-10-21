@@ -14,6 +14,5 @@ countreads_trim.pl
 #------------------------------
 rnaseq_clipper_MS.pl
 	Modified with the adaptor sequence used (NNNNGGG)
-	Does not remove duplicates
-	Does not remove reads without header
+	Removes PCR duplicates sharing same degenerate header and transcript sequence
 	Please note this is a rough draft and will be cleaned up in time
