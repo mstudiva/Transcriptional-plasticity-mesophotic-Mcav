@@ -1,4 +1,4 @@
-setwd("~/path/to/local/directory/")
+setwd("~/path/to/local/directory")
 
 # run these once, then comment out
 # source("http://bioconductor.org/biocLite.R")
@@ -231,10 +231,12 @@ dev.off()
 # can we predict site by mesophotic trends?
 pred.s=predict.dapc(dp.s,newdata=(t(vsd[,conditions$depth=="mesophotic"]))) 
 pred.s 
+# not especially
 
 # can we predict depth by mesophotic trends?
 pred.d=predict.dapc(dp.d,newdata=(t(vsd[,conditions$depth=="mesophotic"]))) 
 pred.d 
+# at certain sites
 
 #----------------------
 # FITTING GENE BY GENE MODELS
@@ -407,12 +409,12 @@ load("pvals.RData")
 library(DESeq2)
 
 # overall factors, full model
-candidates=list("depth"=row.names(depth)[depth$padj<0.1 & !(is.na(depth$padj))],"site"=row.names(site)[site$padj<0.1 & !(is.na(site$padj))],"interaction"=row.names(int)[int$padj<0.1 & !(is.na(int$padj))])
+#candidates=list("depth"=row.names(depth)[depth$padj<0.1 & !(is.na(depth$padj))],"site"=row.names(site)[site$padj<0.1 & !(is.na(site$padj))],"interaction"=row.names(int)[int$padj<0.1 & !(is.na(int$padj))])
 
 candidates=list("depth"=degs.depth,"site"=degs.site, "interaction"=degs.int)
 
 # DEGs across depths within site - are some genes conserved?
-sitedepth =list("CBC"=row.names(CBC.d)[CBC.d$padj<0.1 & !(is.na(CBC.d$padj))],"WFGB"=row.names(WFGB.d)[WFGB.d$padj<0.1 & !(is.na(WFGB.d$padj))],"EFGB"=row.names(EFGB.d)[EFGB.d$padj<0.1 & !(is.na(EFGB.d$padj))],"PRTER"=row.names(PRTER.d)[PRTER.d$padj<0.1 & !(is.na(PRTER.d$padj))])
+#sitedepth =list("CBC"=row.names(CBC.d)[CBC.d$padj<0.1 & !(is.na(CBC.d$padj))],"WFGB"=row.names(WFGB.d)[WFGB.d$padj<0.1 & !(is.na(WFGB.d$padj))],"EFGB"=row.names(EFGB.d)[EFGB.d$padj<0.1 & !(is.na(EFGB.d$padj))],"PRTER"=row.names(PRTER.d)[PRTER.d$padj<0.1 & !(is.na(PRTER.d$padj))])
 
 sitedepth=list("CBC"=degs.CBC,"PRTER"=degs.PRTER,"WFGB"=degs.WFGB,"EFGB"=degs.EFGB)
 
@@ -498,6 +500,7 @@ save(depth.p,file="depth_lpv.RData")
 
 # signed log p-values: -log(pvalue)* direction:
 head(site)
+source=site[!is.na(site$pvalue),]
 site.p=data.frame("gene"=row.names(source))
 site.p$lpv=-log(source[,"pvalue"],10)
 site.p$lpv[source$stat<0]=site.p$lpv[source$stat<0]*-1
@@ -508,6 +511,7 @@ save(site.p,file="site_lpv.RData")
 # site:depth interaction 
 # signed log p-values: -log(pvalue)* direction:
 head(int)
+source=int[!is.na(int$pvalue),]
 int.p=data.frame("gene"=row.names(source))
 int.p$lpv=-log(source[,"pvalue"],10)
 int.p$lpv[source$stat<0]=int.p$lpv[source$stat<0]*-1
@@ -516,7 +520,8 @@ write.csv(int.p,file="int_lpv.csv",row.names=F,quote=F)
 save(int.p,file="int_lpv.RData")
 
 #-------------------
-# contrast statements include both lfc and p values
+load("realModels.RData")
+load("pvals.RData")
 
 # depth response within CBC
 # log2 fold changes:
@@ -592,3 +597,84 @@ WFGB.p$lpv[source$stat<0]= WFGB.p$lpv[source$stat<0]*-1
 head(WFGB.p)
 write.csv(WFGB.p,file="WFGB_lpv.csv",row.names=F,quote=F)
 save(WFGB.p,file="WFGB_lpv.RData")
+
+#-------------------
+# exporting dataset of conserved genes across all 4 sites
+# differs from the previous export steps in that only significant DEGs are exported here, to specifically look at conserved genes
+load("realModels.RData")
+load("pvals.RData")
+
+library(plyr)
+
+# creates dataframe of significant DEGs for each site, one each for lfc and lpv
+# run each of these twice with the corresponding lines uncommented to export lfc and lpv datasets
+source=CBC.d[CBC.d$padj<0.1 & !(is.na(CBC.d$padj)),]
+CBC=data.frame("gene"=row.names(source))
+#CBC$lfc=source[,"log2FoldChange"]
+CBC$lpv=-log(source[,"pvalue"],10)
+CBC$lpv[source$stat<0]= CBC$lpv[source$stat<0]*-1
+head(CBC)
+
+source=EFGB.d[EFGB.d$padj<0.1 & !(is.na(EFGB.d$padj)),]
+EFGB=data.frame("gene"=row.names(source))
+#EFGB$lfc=source[,"log2FoldChange"]
+EFGB$lpv=-log(source[,"pvalue"],10)
+EFGB$lpv[source$stat<0]= EFGB$lpv[source$stat<0]*-1
+head(EFGB)
+
+source=PRTER.d[PRTER.d$padj<0.1 & !(is.na(PRTER.d$padj)),]
+PRTER=data.frame("gene"=row.names(source))
+#PRTER$lfc=source[,"log2FoldChange"]
+PRTER$lpv=-log(source[,"pvalue"],10)
+PRTER$lpv[source$stat<0]= PRTER$lpv[source$stat<0]*-1
+head(PRTER)
+
+source=WFGB.d[WFGB.d$padj<0.1 & !(is.na(WFGB.d$padj)),]
+WFGB=data.frame("gene"=row.names(source))
+#WFGB$lfc=source[,"log2FoldChange"]
+WFGB$lpv=-log(source[,"pvalue"],10)
+WFGB$lpv[source$stat<0]= WFGB$lpv[source$stat<0]*-1
+head(WFGB)
+
+# finds and outputs common genes and associated DEG reponses (lfc or lpv) across all sites
+commongenes<- join_all(list(CBC,EFGB,PRTER,WFGB), by="gene", type="inner")
+head(commongenes)
+names(commongenes)<- c("gene","CBC","EFGB","PRTER","WFGB")
+
+# takes the corresponding site column of lfc or lpv for export
+# run each of these twice with the corresponding lines uncommented to export lfc and lpv datasets
+CBC.common=data.frame("gene"=commongenes$gene)
+#CBC.common$lfc= commongenes[,"CBC"]
+CBC.common$lpv= commongenes[,"CBC"]
+CBC.common
+#write.csv(CBC.common,file="CBC_common_lfc.csv",row.names=F,quote=F)
+#save(CBC.common,file="CBC_common_lfc.RData")
+write.csv(CBC.common,file="CBC_common_lpv.csv",row.names=F,quote=F)
+save(CBC.common,file="CBC_common_lpv.RData")
+
+EFGB.common=data.frame("gene"=commongenes$gene)
+#EFGB.common$lfc= commongenes[,"EFGB"]
+EFGB.common$lpv= commongenes[,"EFGB"]
+EFGB.common
+#write.csv(EFGB.common,file="EFGB_common_lfc.csv",row.names=F,quote=F)
+#save(EFGB.common,file="EFGB_common_lfc.RData")
+write.csv(EFGB.common,file="EFGB_common_lpv.csv",row.names=F,quote=F)
+save(EFGB.common,file="EFGB_common_lpv.RData")
+
+PRTER.common=data.frame("gene"=commongenes$gene)
+#PRTER.common$lfc= commongenes[,"PRTER"]
+PRTER.common$lpv= commongenes[,"PRTER"]
+PRTER.common
+#write.csv(PRTER.common,file="PRTER_common_lfc.csv",row.names=F,quote=F)
+#save(PRTER.common,file="PRTER_common_lfc.RData")
+write.csv(PRTER.common,file="PRTER_common_lpv.csv",row.names=F,quote=F)
+save(PRTER.common,file="PRTER_common_lpv.RData")
+
+WFGB.common=data.frame("gene"=commongenes$gene)
+#WFGB.common$lfc= commongenes[,"WFGB"]
+WFGB.common$lpv= commongenes[,"WFGB"]
+WFGB.common
+#write.csv(WFGB.common,file="WFGB_common_lfc.csv",row.names=F,quote=F)
+#save(WFGB.common,file="WFGB_common_lfc.RData")
+write.csv(WFGB.common,file="WFGB_common_lpv.csv",row.names=F,quote=F)
+save(WFGB.common,file="WFGB_common_lpv.RData")
