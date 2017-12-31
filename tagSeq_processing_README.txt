@@ -1,4 +1,4 @@
-# Tag-based RNA-seq reads processing pipeline, version August 30, 2017
+# Tag-based RNA-seq reads processing pipeline, version December 31, 2017
 # Created by Misha Matz (matz@utexas.edu), modified by Michael Studivan (mstudiva@fau.edu) 
 # for use on the FAU KoKo HPC
 
@@ -245,13 +245,13 @@ git clone https://github.com/mstudiva/Mcav-Annotated-Transcriptome.git
 mv Mcav-Annotated-Transcriptome/* .
 rm -rf Mcav-Annotated-Transcriptome
 
-wget -O mcav.fasta https://www.dropbox.com/s/uzhpkzztexezohv/mcav.fasta?dl=0
+wget -O mcav_holobiont.fasta https://www.dropbox.com/s/f6im9acvicq4h2a/mcav_holobiont.fasta?dl=0
 
-cp ~/annotate/mcav.fasta ~/db/
+cp ~/annotate/mcav_holobiont.fasta ~/db/
 cd db
 
 # creating bowtie2 index for your transcriptome:
-echo 'bowtie2-build mcav.fasta mcav' > btb
+echo 'bowtie2-build mcav_holobiont.fasta mcav_holobiont' > btb
 launcher_creator.py -j btb -n btb -q shortq7 -t 2:00:00 -e mstudiva@fau.edu
 sbatch btb.slurm
 
@@ -261,7 +261,7 @@ sbatch btb.slurm
 # creating a list of mapping commands, one per reads file:
 cd ~/tagseq/
 
-srun iRNAseq_bowtie2map.pl "trim$" ~/db/mcav > maps
+srun iRNAseq_bowtie2map.pl "trim$" ~/db/mcav_holobiont > maps
 launcher_creator.py -j maps -n maps -q shortq7 -t 2:00:00 -e mstudiva@fau.edu
 sbatch maps.slurm
 
@@ -286,9 +286,9 @@ nano alignrate.txt
 # NOTE: Must have a tab-delimited file giving correspondence between contigs in the transcriptome fasta file
 # and genes. Typically, each gene is represented by several contigs in the transcriptome.
 # mcav_seq2iso.tab is in your annotate directory 
-cp ~/annotate/mcav_seq2iso.tab ~/db/
+cp ~/annotate/mcav_holobiont_seq2iso.tab ~/db/
 
-samcount_launch_bt2.pl '\.sam$' /home/mstudiva/db/mcav_seq2iso.tab > sc
+samcount_launch_bt2.pl '\.sam$' /home/mstudiva/db/mcav_holobiont_seq2iso.tab > sc
 launcher_creator.py -j sc -n sc -q shortq7 -t 2:00:00 -e mstudiva@fau.edu
 sbatch sc.slurm
 

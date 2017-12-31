@@ -76,11 +76,13 @@ https://github.com/mstudiva/Mcav-Annotated-Transcriptome.git
 # the -log(p-value) tables were generated at the end of the DESeq2 script
 # you should have one _lpv.csv for each of your experimental factors, and one for the 
 # interaction
-# you can also compare fc datasets as well
+# you can also compare fc datasets as well for factors with corresponding dataframes
 
 #------------------------------
 # EuKaryotic Orthologous Groups (KOG) Analysis with Mann-Whitney U-Test
-# This analysis is meant to compare 2-3 groups of gene expression responses to one another
+
+# This analysis is meant to compare enrichment of universal KOG annotations 
+# through gene expression across groups
 # For example, subjecting different groups of corals to the same kind of treatment
 # Take a look at the example found at ?KOGMWU, describing a heat stress experiment with
 # adults and two age groups of larvae
@@ -91,10 +93,43 @@ https://github.com/mstudiva/Mcav-Annotated-Transcriptome.git
 # It is found in my GitHub repository:
 https://github.com/mstudiva/Mcav-Annotated-Transcriptome.git
 
+# Use the template included in this repository
 # Replace your datasets and factor names with those in your experiment
+# The template follows 3 analyses: full model, effect of site, depth, and interaction on 
+# expression; comparison of shallow vs mesophotic expression across 4 sites; and comparison
+# of conserved genes across depths among sites
 
 #------------------------------
 # Weighted Correlation Network Analysis (WGCNA)
 
-# In progress, come back later
+# This analysis explores correlations between gene expression across treatment groups and 
+# other measured response variables (physiological monitoring, growth rates, really anything)
+# First, genes are clustered into modules based on similar expression patterns
+# Then, module membership is correlated to your other response metrics to identify 
+# interesting patterns
+# For example, you could identify if the gene expression of a particular module is 
+# associated with increased growth rate, or if a particular genotype shows different 
+# expression patterns
+
+# Create a "WGCNA" directory
+
+# Copy the 3 template R scripts into the working directory
+# s.threshold.signed.R, tom_calc_signed.R, wgcna_MEanalysis_signed_heavy.R
+# Copy the data4wgcna.RData package from the "DESeq2" directory to "WGCNA"
+# Copy mcav_iso2gene.tab included in this repository to "WGCNA"
+
+# Run the R script as directed
+
+#------------------------------
+# heatmaps
+
+# Once you have any trends in gene expression across your factors identified using the 
+# above tests, you can design heatmaps to visually represent the differences
+# Use the heatmapEveryWhichWay R script to create custom heatmaps by: GO analysis, KOG
+# analysis, gene name, top significant DEGs, WGCNA membership, etc
+
+# Create a "heatmaps" directory
+# Copy the mcav_iso2gene.tab and mcav_iso2kogClass.tab included in this repository to 
+# "heatmaps"
+# Copy the data input files as needed for each respective section of code into "heatmaps"
 
