@@ -245,7 +245,7 @@ git clone https://github.com/mstudiva/Mcav-Annotated-Transcriptome.git
 mv Mcav-Annotated-Transcriptome/* .
 rm -rf Mcav-Annotated-Transcriptome
 
-wget -O mcav_holobiont.fasta https://www.dropbox.com/s/f6im9acvicq4h2a/mcav_holobiont.fasta?dl=0
+wget -O mcav_holobiont.fasta https://www.dropbox.com/s/f6im9acvicq4h2a/mcav_holobiont.fasta
 
 cp ~/annotate/mcav_holobiont.fasta ~/db/
 cd db
@@ -276,7 +276,7 @@ ll *.fq.trim.sam | wc -l
 
 # what is the mapping efficiency? This will find relevant lines in the "job output" file
 # that was created while the mapping was running
-grep "overall alignment rate" maps.e162145* > alignrate.txt
+grep "overall alignment rate" maps.e2130254* > alignrate.txt
 nano alignrate.txt
 
 #------------------------------
