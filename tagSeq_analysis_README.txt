@@ -1,4 +1,4 @@
-# tag-based RNA-Seq analysis, version October 17 2017
+# tag-based RNA-Seq analysis, version Apr 10, 2019
 # Created by Michael Studivan (mstudiva@fau.edu)
 
 #------------------------------
