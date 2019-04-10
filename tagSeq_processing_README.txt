@@ -1,5 +1,5 @@
-# Tag-based RNA-seq reads processing pipeline, version December 31, 2017
-# Created by Misha Matz (matz@utexas.edu), modified by Michael Studivan (mstudiva@fau.edu) 
+# Tag-based RNA-seq reads processing pipeline, version Apr 10, 2019
+# Created by Misha Matz (matz@utexas.edu), modified by Michael Studivan (mstudiva@fau.edu)
 # for use on the FAU KoKo HPC
 
 # log onto cluster
@@ -11,27 +11,27 @@ ssh mstudiva@koko-login.fau.edu
 #	- mstudiva@fau.edu by your actual email;
 #	- mstudiva with your KoKo user name.
 
-# The idea is to copy the chunks separated by empty lines below and paste them into your cluster 
-# terminal window consecutively. 
+# The idea is to copy the chunks separated by empty lines below and paste them into your cluster
+# terminal window consecutively.
 
-# The lines beginning with hash marks (#) are explanations and additional instructions - 
-# please make sure to read them before copy-pasting. 
+# The lines beginning with hash marks (#) are explanations and additional instructions -
+# please make sure to read them before copy-pasting.
 
 #------------------------------
 # installing RNA-seq scripts and setting up the workspace
 
 # switch to home directory
-cd 
+cd
 
-# unless you have done it in the past, make directory called bin, 
+# unless you have done it in the past, make directory called bin,
 # all your scripts should go in there:
-mkdir bin 
+mkdir bin
 mkdir backup
 mkdir tagseq
 mkdir db
 
 # switch to bin:
-cd bin 
+cd bin
 
 # clone github repository
 git clone https://github.com/z0on/tag-based_RNAseq.git
@@ -45,15 +45,15 @@ rm -rf tag-based_RNAseq
 # remove the TACC version of launcher_creator.py from the bin directory
 rm launcher_creator.py
 
-# clone github repository with modified scripts for use with M. cavernosa and Eli Meyer's library prep
+# clone github repository with modified scripts for use with M. cavernosa/Cladocopium sp. and Eli Meyer's library prep
 git clone https://github.com/mstudiva/tagseq-modified-scripts.git
 
 # move files from subdirectory and delete empty subdirectory
 mv tagseq-modified-scripts/* .
 rm -rf tagseq-modified-scripts
 
-# to use Google Drive for file storage, you have to install gdrive 
-# download the file from the following link to your personal computer 
+# to use Google Drive for file storage, you have to install gdrive
+# download the file from the following link to your personal computer
 # https://docs.google.com/uc?id=0B3X9GlR6EmbnQ0FtZmJJUXEyRTA&export=download
 # scp the file to your bin directory
 scp gdrive-linux-x64 mstudiva@koko-login.fau.edu:~/bin/
@@ -71,10 +71,10 @@ srun gdrive about
 # setting up working environment:
 
 # switch to home directory
-cd 
+cd
 
 # start nano editor on the file that will hold your environmental settings
-nano .bashrc 
+nano .bashrc
 
 # paste these lines in SECTION 1:
 module load gcc
@@ -100,13 +100,13 @@ source .bashrc
 # switch to home directory
 cd
 
-# try a few commands: you should see messages about their usage and/or error messages 
+# try a few commands: you should see messages about their usage and/or error messages
 # about missing arguments, but not "command not found"
 samcount.pl
 launcher_creator.py
 
 #------------------------------
-# downloading sequence data: 
+# downloading sequence data:
 
 # once each run .zip file is downloaded, upload to a web hosting service like Dropbox or Google Drive
 # FAU has free Google Drive storage up to 10TB
@@ -159,13 +159,13 @@ ls *.gz | perl -pe 's/(\S+)/gunzip $1/' >gunz
 launcher_creator.py -j gunz -n gunz -q shortq7 -t 2:00:00 -e mstudiva@fau.edu
 sbatch gunz.slurm
 
-# check status of your job (qw : in queue; r : running; nothing printed on the screen - complete) 
-squeue -u mstudiva 
+# check status of your job (PD : pending, not enough nodes; R : running; nothing printed on the screen - complete)
+squeue -u mstudiva
 
 # double check you have the number of files you should
 ll *.fastq | wc -l
 
-# If your samples are split across multiple files from different lanes, 
+# If your samples are split across multiple files from different lanes,
 # concatenating the corresponding fastq files by sample:
 # ngs_concat.pl commonTextInFastqFilenames  "FilenameTextImmediatelyBeforeSampleID(.+)FilenameTextImmediatelyAfterSampleID"
 
@@ -180,7 +180,7 @@ for f in MS_*.fq; do x="${f##*_}"; mv "$f" "${f%_*}$(printf '_%03d.fq' "${x%.fq}
 ll *.fq | wc -l
 
 # look at the reads:
-# head -50 SampleName.fq 
+# head -50 SampleName.fq
 head -50 MS_009.fq
 # note that every read has four lines, the ID line starts with @HWI
 
@@ -188,7 +188,7 @@ head -50 MS_009.fq
 # head -100 SampleName.fq | grep -E '^[NACGT]+$'
 head -100 MS_009.fq | grep -E '^[NACGT]+$'
 
-# move all the .fq files to the tagseq directory
+# move all the .fastq files to the backup directory
 mv *.fastq ~/backup/
 
 # to count the number of reads in all samples
@@ -201,19 +201,18 @@ sbatch count.slurm
 
 # creating and launching the cleaning process for all files in the same time:
 ls *fq | perl -pe 's/(\S+)/rnaseq_clipper_MS\.pl $1 \| fastx_clipper -a AAAAAAAA -l 20 -Q33 \| fastx_clipper -a AGATCGGAAG -l 20 -Q33 \| fastq_quality_filter -q 20 -p 90 -Q33 >$1.trim/' >clean
-
 launcher_creator.py -j clean -n clean -t 2:00:00 -q shortq7 -e mstudiva@fau.edu
 sbatch clean.slurm
 
 # how the job is doing?
 squeue -u mstudiva
 
-# It is complete! I got a bunch of .trim files that are non-empty! 
+# It is complete! I got a bunch of .trim files that are non-empty!
 ll
 # double check you have the same number of files as samples
 ll *.fq.trim | wc -l
 
-# but did the trimming really work? 
+# but did the trimming really work?
 # Use the same one-liner as before on the trimmed file to see if it is different
 # from the raw one that you looked at before:
 
@@ -224,12 +223,12 @@ head -100 MS_009.fq | grep -E '^[NACGT]+$'
 head -100 MS_009.fq.trim | grep -E '^[NACGT]+$'
 # the long runs of base A should be gone
 
-# double-check that the rnaseq_clipper did not filter out too many reads by looking at the clean.e file
-nano clean.e162138
+# double-check that the rnaseq_clipper did not filter out too many reads by looking at the clean.e####### file
+nano clean.e2569132
 # make sure you're not losing too many reads to duplicates
 
 # to save time in case of issues, move the concatenated fq files to backup directory
-mv *.fq ~/backup/ 
+mv *.fq ~/backup/
 
 # to count the number of reads in trimmed samples
 echo "countreads_trim.pl > countreads_trim.txt" > count_trim
@@ -239,19 +238,20 @@ sbatch count_trim.slurm
 #------------------------------
 # download and format reference transcriptome:
 
-# there are already-annotated mcav.fasta repositories on github and Dropbox
+# there are already-annotated M. cavernosa and Cladocopium transcriptomes on github and Dropbox
 mkdir annotate
+cd annotate
 git clone https://github.com/mstudiva/Mcav-Annotated-Transcriptome.git
 mv Mcav-Annotated-Transcriptome/* .
 rm -rf Mcav-Annotated-Transcriptome
 
-wget -O mcav_holobiont.fasta https://www.dropbox.com/s/f6im9acvicq4h2a/mcav_holobiont.fasta
+wget -O Mcavernosa_Cladocopium.fasta https://www.dropbox.com/s/4s093k2wzimavp8/Mcavernosa_Cladocopium.fasta
 
-cp ~/annotate/mcav_holobiont.fasta ~/db/
+cp ~/annotate/Mcavernosa_Cladocopium.fasta ~/db/
 cd db
 
 # creating bowtie2 index for your transcriptome:
-echo 'bowtie2-build mcav_holobiont.fasta mcav_holobiont' > btb
+echo 'bowtie2-build Mcavernosa_Cladocopium.fasta Mcavernosa_Cladocopium' > btb
 launcher_creator.py -j btb -n btb -q shortq7 -t 2:00:00 -e mstudiva@fau.edu
 sbatch btb.slurm
 
@@ -261,7 +261,7 @@ sbatch btb.slurm
 # creating a list of mapping commands, one per reads file:
 cd ~/tagseq/
 
-srun iRNAseq_bowtie2map.pl "trim$" ~/db/mcav_holobiont > maps
+srun iRNAseq_bowtie2map.pl "trim$" ~/db/Mcavernosa_Cladocopium > maps
 launcher_creator.py -j maps -n maps -q shortq7 -t 2:00:00 -e mstudiva@fau.edu
 sbatch maps.slurm
 
@@ -276,7 +276,7 @@ ll *.fq.trim.sam | wc -l
 
 # what is the mapping efficiency? This will find relevant lines in the "job output" file
 # that was created while the mapping was running
-grep "overall alignment rate" maps.e2130254* > alignrate.txt
+grep "overall alignment rate" maps.e2569140* > alignrate.txt
 nano alignrate.txt
 
 #------------------------------
@@ -285,10 +285,10 @@ nano alignrate.txt
 
 # NOTE: Must have a tab-delimited file giving correspondence between contigs in the transcriptome fasta file
 # and genes. Typically, each gene is represented by several contigs in the transcriptome.
-# mcav_seq2iso.tab is in your annotate directory 
-cp ~/annotate/mcav_holobiont_seq2iso.tab ~/db/
+# mcav_seq2iso.tab is in your annotate directory
+cp ~/annotate/Mcavernosa_Cladocopium_seq2iso.tab ~/db/
 
-samcount_launch_bt2.pl '\.sam$' /home/mstudiva/db/mcav_holobiont_seq2iso.tab > sc
+samcount_launch_bt2.pl '\.sam$' /home/mstudiva/db/Mcavernosa_Cladocopium_seq2iso.tab > sc
 launcher_creator.py -j sc -n sc -q shortq7 -t 2:00:00 -e mstudiva@fau.edu
 sbatch sc.slurm
 
@@ -305,27 +305,26 @@ ll *.fq.trim.sam.counts | wc -l
 srun expression_compiler.pl *.sam.counts > allc.txt
 
 # how does the allc.txt look?
-head allc.txt 
+head allc.txt
 
-# let's remove those annoying chains of extensions from sample names: 
+# let's remove those annoying chains of extensions from sample names:
 cat allc.txt | perl -pe 's/\.fq\.trim\.sam\.counts//g' >allcounts.txt
-head allcounts.txt 
+head allcounts.txt
 
 # display full path to where you were doing all this:
 pwd
 # copy the path!
-~/tagseq/allcounts.txt
 
 #------------------------------
 # whew. Now just need to copy the result to your laptop!
 
 # open new terminal window on Mac, or WinSCP on Windows
-# navigate to the directory you want the file to be 
-# (on Mac, you can just drag the destination folder from Finder into command line to get the full path). 
+# navigate to the directory you want the file to be
+# (on Mac, you can just drag the destination folder from Finder into command line to get the full path).
 
 # this copies all .txt files, including allcounts, allc, alignrate, read counts
-cd /path/to/local/directory 
-scp mstudiva@koko-login.fau.edu:~/tagseq/*.txt .
+cd /path/to/local/directory
+scp mstudiva@koko-login.fau.edu:~/path/to/HPC/directory/*.txt .
 
 # copy the file from KoKo using scp (in WinSCP, just paste the path you just copied
 # into an appropriate slot (should be self-evident) and drag the allcounts.txt file
