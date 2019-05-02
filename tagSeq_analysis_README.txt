@@ -1,4 +1,4 @@
-# tag-based RNA-Seq analysis, version Apr 10, 2019
+# tag-based RNA-Seq analysis, version May 2, 2019
 # Created by Michael Studivan (mstudiva@fau.edu)
 
 #------------------------------
@@ -31,14 +31,17 @@
 # rows in the design file
 
 # Save the counts as allcounts.txt and the design table as design.csv
+# or a variation based on experiment and/or transcriptome
+# e.g. I had environmental and transplant experiments sequenced on the same lanes
+# and host and symbiont transcriptomes, so I had multiple allcounts files
+# "allcounts_enviro_mcav" and "allcounts_enviro_zoox", etc
 
 #------------------------------
 # Quantifying Differentially-Expressed Genes (DEGs) with DESeq2
 
 # Create a "DESeq2" directory
 
-# Copy allcounts.txt and design.csv files to the same working directory as your DESeq2.R
-# script
+# Copy allcounts.txt and design.csv files to the same working directory as your DESeq2.R script
 # Before running the R script, go through and determine how the experimental factors are
 # coded in the template experiment
 # Use Find & Replace to change them to your applicable factors

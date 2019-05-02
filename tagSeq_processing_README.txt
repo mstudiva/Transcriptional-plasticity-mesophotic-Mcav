@@ -1,4 +1,4 @@
-# Tag-based RNA-seq reads processing pipeline, version Apr 10, 2019
+# Tag-based RNA-seq reads processing pipeline, version May 2, 2019
 # Created by Misha Matz (matz@utexas.edu), modified by Michael Studivan (mstudiva@fau.edu)
 # for use on the FAU KoKo HPC
 
@@ -113,13 +113,6 @@ launcher_creator.py
 
 cd backup
 
-# Dropbox instructions, not used but kept as a template
-# copy the share link for each run file and replace the links below
-# echo 'wget -O ACB9MJANXX.zip https://www.dropbox.com/s/q3elk0ttnvx0uu3/ACB9MJANXX.zip?dl=0' > wget
-# echo 'wget -O ACB32LANXX.zip https://www.dropbox.com/s/2qrr25wnf85i69f/ACB32LANXX.zip?dl=0' >> wget
-# echo 'wget -O BCB5VAANXX.zip https://www.dropbox.com/s/1uaeo4idnfrmrg7/BCB5VAANXX.zip?dl=0' >> wget
-# echo 'wget -O BCB9MKANXX.zip https://www.dropbox.com/s/1eo8h0hjwte7osf/BCB9MKANXX.zip?dl=0' >> wget
-
 # Google Drive instructions
 # first, use the following line to display all .zip files in your Google Drive account
 gdrive list --query "name contains '.zip'"
@@ -226,6 +219,8 @@ head -100 MS_009.fq.trim | grep -E '^[NACGT]+$'
 # double-check that the rnaseq_clipper did not filter out too many reads by looking at the clean.e####### file
 nano clean.e2569132
 # make sure you're not losing too many reads to duplicates
+# rename as a txt file
+mv clean.e2569132 clean.txt
 
 # to save time in case of issues, move the concatenated fq files to backup directory
 mv *.fq ~/backup/
@@ -262,6 +257,9 @@ sbatch btb.slurm
 cd ~/tagseq/
 
 srun iRNAseq_bowtie2map.pl "trim$" ~/db/Mcavernosa_Cladocopium > maps
+# If you have a file named count_trim, you need to edit maps to remove a line
+nano maps
+# find the line with count_trim, then Ctrl+K to cut, then save
 launcher_creator.py -j maps -n maps -q shortq7 -t 2:00:00 -e mstudiva@fau.edu
 sbatch maps.slurm
 
@@ -276,7 +274,7 @@ ll *.fq.trim.sam | wc -l
 
 # what is the mapping efficiency? This will find relevant lines in the "job output" file
 # that was created while the mapping was running
-grep "overall alignment rate" maps.e2569140* > alignrate.txt
+grep "overall alignment rate" maps.e2571269 > alignrate.txt
 nano alignrate.txt
 
 #------------------------------
@@ -285,7 +283,7 @@ nano alignrate.txt
 
 # NOTE: Must have a tab-delimited file giving correspondence between contigs in the transcriptome fasta file
 # and genes. Typically, each gene is represented by several contigs in the transcriptome.
-# mcav_seq2iso.tab is in your annotate directory
+# Mcavernosa_Cladocopium_seq2iso.tab is in your annotate directory
 cp ~/annotate/Mcavernosa_Cladocopium_seq2iso.tab ~/db/
 
 samcount_launch_bt2.pl '\.sam$' /home/mstudiva/db/Mcavernosa_Cladocopium_seq2iso.tab > sc
