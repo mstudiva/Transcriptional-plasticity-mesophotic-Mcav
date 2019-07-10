@@ -2,6 +2,7 @@ setwd("~/path/to/local/directory")
 
 # run these once, then comment out
 # source("http://bioconductor.org/biocLite.R")
+# biocLite("BiocUpgrade")
 # biocLite("DESeq2",dependencies=T)
 # biocLite("arrayQualityMetrics",dependencies=T)  # requires Xquartz, xquartz.org
 # biocLite("BiocParallel")
@@ -13,7 +14,8 @@ setwd("~/path/to/local/directory")
 # install.packages("plotrix")
 # install.packages("ape")
 # install.packages("ggplot2")
-# install.packages("rgl") 
+# install.packages("rgl")
+# install.packages("adegenet")
 
 #---------------------
 # assembling data, running outlier detection, and fitting models
@@ -27,50 +29,26 @@ counts = read.table("allcounts_enviro.txt")
 
 # how many genes we have total?
 nrow(counts) 
+ncol(counts)
 
 # how does the data look? 
 head(counts)
 
 #---------------------
-# the following section prefilters the counts dataframe to remove genes with low counts
-# DESeq2 does this naturally, but prefiltering might make data transformations go faster
-# for larger datasets that will take forever anyways, I suggest skipping prefiltering
-# and use vsd transformation instead of rlog
+# the following section prefilters the counts dataframe to remove genes with low counts (counts under 10 across all samples)
+# while DESeq2 filters out low-count genes during testing anyways, prefiltering makes data transformations go faster
 
-# how many genes have mean count >=3?
-# means=apply(counts,1,mean)
-# table(means>=3)
-# plot(density(means),log="x")
-
-# distribution of total counts among samples: are there samples with less the 2SD counts?
-# smeans=apply(counts,2,sum)
-# lsm=log(smeans,10)
-# hist(lsm,breaks=12)
-# sdl=sd(lsm)
-# which(mean(lsm)-lsm > 2*sdl)
-
-# counts[1:10,1]
-# head(counts)
-# removing all genes with mean count less than 3
-# countData=counts[means>=3,]
-# nrow(countData)
-# str(countData)
-# write.csv(countData, file="countData.csv")
-
-#---------------------
-countData=counts
+keep <- rowSums(counts) >= 10
+countData <- counts[keep,]
 nrow(countData)
 ncol(countData)
 write.csv(countData, file="countData.csv")
 
-# for WGCNA: removing all genes with mean count less than 10 
-# counts4wgcna=counts[means>=10,]
-# alternate filtering method below
-
-# for WCGNA: removing all genes with counts in less than 10 % of samples
-counts4wgcna = counts[apply(counts,1,function(x) sum(x==0))<ncol(counts)*0.9,]
+# for WGCNA
+counts4wgcna <- countData
 nrow(counts4wgcna)
 ncol(counts4wgcna)
+write.csv(counts4wgcna, file="counts4wgcna.csv")
 
 # importing a design .csv file
 design = read.csv("design_enviro.csv", head=TRUE)
@@ -80,17 +58,11 @@ str(design)
 # make big dataframe including all factors and interaction, getting normalized data for outlier detection
 dds = DESeqDataSetFromMatrix(countData=countData, colData=design, design=~ site+depth+site:depth)
 
-# pre-filtering at this point will speed up DESeq models without losing critical data
-# creates a series of TRUE/FALSE statements for isogroups with total counts above 10 across all samples
-# keep <- rowSums(counts(dds)) >= 10
-# dds <- dds[keep,]
-# Note: prefiltering caused my processing time to speed up, but many outliers were detected. Sticking with original data
-
 # reorders treatment factor according to "control" vs "treatment" levels
 dds$depth <- factor(dds$depth, levels = c("shallow","mesophotic"))
 
 # for large datasets, rlog may take too much time, especially for an unfiltered dataframe
-# vsd is much faster and still works for outlier detection
+# vsd is much faster and is recommended for datasets with more than 20 or so samples
 Vsd=varianceStabilizingTransformation(dds)
 # rl=rlog(dds)
 
@@ -100,17 +72,14 @@ e=ExpressionSet(assay(Vsd), AnnotatedDataFrame(as.data.frame(colData(Vsd))))
 
 # running outlier detection
 arrayQualityMetrics(e,intgroup=c("site","depth"),force=T)
-dev.off()
 # open the directory "arrayQualityMetrics report for e" in your working directory and open index.html
-# Figure 2 shows a bar plot of array-to-array distances and an outlier detection threshold based on your samples
-# samples above the threshold are considered outliers
+# Array metadata and outlier detection overview gives a report of all samples, and which are likely outliers according to the 3 methods tested. I typically remove the samples that violate *1 (distance between arrays).
+# Figure 2 shows a bar plot of array-to-array distances and an outlier detection threshold based on your samples. Samples above the threshold are considered outliers
 # under Figure 3: Principal Components Analyses, look for any points far away from the rest of the sample cluster
-# the same outliers from Fig 2 are also larger points
-# move your mouse over and it will identify the sample name and array number
 # use the array number for removal in the following section
 
-## if there were outliers, say, sample number MS_145 (array 138):
-outs=c(138, 168, 170)
+## if there were outliers, say, array 150:
+outs=c(150)
 countData=countData[,-outs]
 counts4wgcna=counts4wgcna[,-outs]
 Vsd=Vsd[,-outs]
@@ -149,13 +118,13 @@ colnames(vsd.wg)=snames
 save(vsd.wg,design,file="data4wgcna.RData")
 
 #-------------------
-# EXPLORING SIMILARITIES AMONG SAMPLES
+# exploring similarities among samples
 
 # heatmap and hierarchical clustering:
 load("vsd.RData")
 library(pheatmap)
 # similarity among samples
-pdf(file="heatmap_enviro.pdf", width=50, height=50)
+pdf(file="heatmap_enviro_mcav.pdf", width=50, height=50)
 pheatmap(cor(vsd))
 dev.off()
 
@@ -181,20 +150,19 @@ dev.off()
 # the number of black points above the line of red crosses (random model) corresponds to the number of good PC's
 
 # plotting PCoA
-pdf(file="PCoA_enviro.pdf", width=12, height=6)
+pdf(file="PCoA_enviro_mcav.pdf", width=12, height=6)
 par(mfrow=c(1,2))
 plot(scores[,1], scores[,2],col=as.numeric(as.factor(conditions$ind)),pch=19, xlab="Coordinate 1", ylab="Coordinate 2", main="Site")
 # cluster overlay of site
-ordihull(scores,conditions$site,label=F,draw="polygon",col=c("blue","orange", "red","lightblue"),cex=1.5)
-legend("topleft", title = "Site", legend=c("CBC","WFGB","EFGB","PRTER"), fill = c("blue","lightblue","orange","red"))
+ordispider(scores,conditions$site,label=T,col=c("#f6e8c3","#5ab4ac", "#8c510a","#01665e"))
+# legend("topright", legend=c("BLZ","WFGB","EFGB","PRG-DRT"), fill = c("#f6e8c3","#01665e", "#5ab4ac","#8c510a"), bty="n")
 # cluster overlay of depth
 plot(scores[,1], scores[,2],col=as.numeric(as.factor(conditions$ind)),pch=19, xlab="Coordinate 1", ylab="Coordinate 2", main="Depth")
-ordihull(scores,conditions$depth,label=F,draw="polygon",col=c("coral","cyan3"),cex=1.5)
-legend("topleft", title = "Depth", legend=c("shallow","mesophotic"), fill = c("cyan3","coral"))
+ordispider(scores,conditions$depth,label=T,col=c("coral","cyan3"))
+# legend("topright", legend=c("mesophotic","shallow"), fill = c("coral","cyan3"), bty="n")
 dev.off()
 
 # other overlay options
-# ordispider(scores,conditions$ibyt,label=T)
 # ordiellipse(scores,conditions$trt,label=T,draw="polygon",col="grey90",cex=2)
 
 # neighbor-joining tree of samples (based on significant PCo's):
@@ -204,39 +172,52 @@ plot(tre,cex=0.8)
 dev.off()
 
 # interactive 3d plot (package rgl)
-plot3d(scores[,1], scores[,2], scores[,3],col=as.numeric(as.factor(conditions$site)),type="s",radius=0.5*as.numeric(as.factor(conditions$depth)))
+# plot3d(scores[,1], scores[,2], scores[,3],col=as.numeric(as.factor(conditions$site)),type="s",radius=0.5*as.numeric(as.factor(conditions$depth)))
 # this thing is intense
 
 # formal analysis of variance in distance matricies: site and site:depth interaction are significant
 ad=adonis(t(vsd)~site*depth,data=conditions,method="manhattan")
 ad
 # creating pie chart to represent ANOVA results
-cols=c("skyblue","green2","coral","grey80")
+cols=c("blue","orange","lightblue","grey80")
 pdf(file="ANOVA_pie.pdf", width=6, height=6)
-pie(ad$aov.tab$R2[1:4],labels=row.names(ad$aov.tab)[1:4],col=cols,main="Site vs Depth")
+pie(ad$aov.tab$R2[1:4],labels=row.names(ad$aov.tab)[1:4],col=cols,main="site vs depth")
 dev.off()
 
 # DAPC analysis: creating discriminant function to tell shallow from mesophotic, based on factors
 library(adegenet)
 
-pdf(file="DAPC_enviro.pdf", width=12, height=6)
-par(mfrow=c(1,2))
-dp.s=dapc(t(vsd[,conditions$depth!="mesophotic"]),conditions$site[conditions$depth!="mesophotic"],n.pca=3, n.da=1)
-scatter(dp.s,bg="white",scree.da=FALSE,legend=TRUE,solid=.4, col = c("blue","lightblue","orange","red")) #discrimination of mesophotic expression by site
+# discrimination of mesophotic expression by site
+# runs simulations on randomly-chosen datasets of 90% of the total dataset to test the number of PCs to retain
+set.seed(999)
+xvalDapc(t(vsd[,conditions$depth!="mesophotic"]),conditions$site[conditions$depth!="mesophotic"], n.rep=100, parallel="multicore", ncpus= 8)
+# pick the value given for 'Number of PCs Achieving Lowest MSE'
+# This tells us 30 PCs is the most successful in terms of correct assignment, but we need to test again with a smaller range of possible PCs and more reps
+xvalDapc(t(vsd[,conditions$depth!="mesophotic"]),conditions$site[conditions$depth!="mesophotic"], n.rep=1000, n.pca=20:40, parallel="multicore", ncpus= 8)
+# 27 PCs
 
-dp.d=dapc(t(vsd[,conditions$site!="mesophotic"]),conditions$depth[conditions$site!="mesophotic"],n.pca=3, n.da=1)
-scatter(dp.d,bg="white",scree.da=FALSE,legend=TRUE,solid=.4, col= c("cyan3","coral")) #discrimination of mesophotic expression by depth
+#discrimination of transplant expression by depth
+xvalDapc(t(vsd[,conditions$site!="mesophotic"]),conditions$depth[conditions$site!="mesophotic"], n.rep=100, parallel="multicore", ncpus= 8)
+# This tells us 60 PCs is the most successful in terms of correct assignment, but we need to test again with a smaller range of possible PCs and more reps
+xvalDapc(t(vsd[,conditions$site!="mesophotic"]),conditions$depth[conditions$site!="mesophotic"], n.rep=1000, n.pca=50:70, parallel="multicore", ncpus= 8)
+# 50 PCs
+
+pdf(file="DAPC_enviro_mcav.pdf", width=12, height=6)
+par(mfrow=c(1,2))
+dp.s=dapc(t(vsd[,conditions$depth!="mesophotic"]),conditions$site[conditions$depth!="mesophotic"],n.pca=27, n.da=3)
+scatter(dp.s, bg="white",scree.da=FALSE,legend=FALSE, solid=1, col = c("#f6e8c3","#5ab4ac","#8c510a","#01665e")) #discrimination of mesophotic expression by site
+
+dp.d=dapc(t(vsd[,conditions$site!="mesophotic"]),conditions$depth[conditions$site!="mesophotic"],n.pca=50, n.da=1)
+scatter(dp.d, bg="white",scree.da=FALSE,legend=TRUE,posi.leg="topleft", solid=.5, col= c("coral","cyan3")) #discrimination of mesophotic expression by depth 
 dev.off()
 
 # can we predict site by mesophotic trends?
 pred.s=predict.dapc(dp.s,newdata=(t(vsd[,conditions$depth=="mesophotic"]))) 
 pred.s 
-# not especially
 
 # can we predict depth by mesophotic trends?
 pred.d=predict.dapc(dp.d,newdata=(t(vsd[,conditions$depth=="mesophotic"]))) 
 pred.d 
-# at certain sites
 
 #----------------------
 # FITTING GENE BY GENE MODELS
@@ -247,16 +228,10 @@ load("initial.RData")
 library(DESeq2)
 library(BiocParallel)
 
-# alternative method to obtain contrast statements
-# group all factors into single factor "group"
-# dds$group <- factor(paste0(dds$site, dds$depth))
-# design(dds) <- ~ group
-# then run model same as below
-
 # Running full model for contrast statements
 dds=DESeq(dds, parallel=TRUE)
 
-# Running DESeq with LRT for the effect of interaction (using full model dds = same as design argument on line 63, ~ site+depth+site:depth)
+# Running DESeq with LRT for the effect of interaction (using full model dds = same as design argument on line 59, ~ site+depth+site:depth)
 # then site+depth are removed, to look just at interaction term
 dds.i=DESeq(dds,test="LRT",reduced=~site+depth, parallel=TRUE)
 
@@ -396,11 +371,13 @@ load("pvals.RData")
 
 means=apply(vsd,1,mean)
 
+pdf(file="DEG_density.pdf", height=5, width=5)
 plot(density(means))
 lines(density(means[degs.site]),col="blue")
-lines(density(means[degs.depth]),col="red")
-lines(density(means[degs.int]),col="gold")
-legend("topright", title = "Factor", legend=c("site","depth","interaction"), fill = c("blue","red","gold"))
+lines(density(means[degs.depth]),col="orange")
+lines(density(means[degs.int]),col="lightblue")
+legend("topright", title = "Factor", legend=c("site","depth","interaction"), fill = c("blue","orange","lightblue"))
+dev.off()
 
 #-------------------
 # venn diagrams
@@ -409,13 +386,9 @@ load("pvals.RData")
 library(DESeq2)
 
 # overall factors, full model
-#candidates=list("depth"=row.names(depth)[depth$padj<0.1 & !(is.na(depth$padj))],"site"=row.names(site)[site$padj<0.1 & !(is.na(site$padj))],"interaction"=row.names(int)[int$padj<0.1 & !(is.na(int$padj))])
-
 candidates=list("depth"=degs.depth,"site"=degs.site, "interaction"=degs.int)
 
 # DEGs across depths within site - are some genes conserved?
-#sitedepth =list("CBC"=row.names(CBC.d)[CBC.d$padj<0.1 & !(is.na(CBC.d$padj))],"WFGB"=row.names(WFGB.d)[WFGB.d$padj<0.1 & !(is.na(WFGB.d$padj))],"EFGB"=row.names(EFGB.d)[EFGB.d$padj<0.1 & !(is.na(EFGB.d$padj))],"PRTER"=row.names(PRTER.d)[PRTER.d$padj<0.1 & !(is.na(PRTER.d$padj))])
-
 sitedepth=list("CBC"=degs.CBC,"PRTER"=degs.PRTER,"WFGB"=degs.WFGB,"EFGB"=degs.EFGB)
 
 # simple venn
@@ -431,44 +404,44 @@ library(VennDiagram)
 
 # overall factors, full model
 fullmodel.venn=venn.diagram(
-	x = candidates,
-	filename=NULL,
-	col = "transparent",
-	fill = c("coral", "cyan3", "khaki3"),
-	alpha = 0.5,
-	label.col = c("darkred", "white", "darkblue", "white", "white", "white", "darkgreen"),
-	cex = 5,
-	fontfamily = "sans",
-	fontface = "bold",
-	cat.default.pos = "text",
-	cat.col =c("darkred", "darkblue", "darkgreen"),
-	cat.cex = 5,
-	cat.fontfamily = "sans",
-	cat.dist = c(0.06, 0.06, -0.06),
-	cat.pos = 3
-	)
-pdf(file="DEG_enviro_venn.pdf", height=12, width=12)
+  x = candidates,
+  filename=NULL,
+  col = "transparent",
+  fill = c("blue", "orange", "lightblue"),
+  alpha = 0.5,
+  label.col = c("darkblue", "white", "darkred", "white", "white", "white", "cornflowerblue"),
+  cex = 5,
+  fontfamily = "sans",
+  fontface = "bold",
+  cat.default.pos = "text",
+  cat.col =c("darkblue", "darkred", "cornflowerblue"),
+  cat.cex = 5,
+  cat.fontfamily = "sans",
+  cat.dist = c(0.06, 0.06, -0.06),
+  cat.pos = 3
+)
+pdf(file="Venn_enviro_mcav.pdf", height=12, width=12)
 grid.draw(fullmodel.venn)
 dev.off()
 
 # DEGs across depths within site - are some genes conserved?
 sitedepth.venn=venn.diagram(
-	x = sitedepth,
-	filename=NULL,
-	col = "transparent",
-	fill = c("coral", "khaki3", "cyan3", "lightskyblue"),
-	alpha = 0.5,
-	label.col = c("darkblue","white","royalblue1","white","white","black","white", "white","darkred","white","white","white","white","darkgreen","white"),
-	cex = 3.5,
-	fontfamily = "sans",
-	fontface = "bold",
-	cat.default.pos = "text",
-	cat.col =c("coral", "khaki3", "cyan3", "lightskyblue"),
-	cat.cex = 3.5,
-	cat.fontfamily = "sans",
-	cat.just = list(c(0,0.5),c(0.75,0.5),c(0.5,0.5),c(0.5,0.5))
-	)
-pdf(file="DEG_sitedepth_venn.pdf", height=10, width=12)
+  x = sitedepth,
+  filename=NULL,
+  col = "transparent",
+  fill = c("#f6e8c3", "#8c510a", "#01665e", "#5ab4ac"),
+  alpha = 0.5,
+  label.col = c("#01665e","white","#35978f","white","white","black","white", "white","#dfc27d","white","white","white","white","#8c510a","white"),
+  cex = 3.5,
+  fontfamily = "sans",
+  fontface = "bold",
+  cat.default.pos = "text",
+  cat.col =c("#dfc27d", "#8c510a", "#01665e", "#5ab4ac"),
+  cat.cex = 3.5,
+  cat.fontfamily = "sans",
+  cat.just = list(c(0,0.5),c(0.75,0.5),c(0.5,0.5),c(0.5,0.5))
+)
+pdf(file="Venn_sitedepth_mcav.pdf", height=10, width=12)
 grid.draw(sitedepth.venn)
 dev.off()
 

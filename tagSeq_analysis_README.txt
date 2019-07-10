@@ -1,4 +1,4 @@
-# tag-based RNA-Seq analysis, version May 2, 2019
+# tag-based RNA-Seq analysis, version July 10, 2019
 # Created by Michael Studivan (mstudiva@fau.edu)
 
 #------------------------------
@@ -96,7 +96,7 @@ https://github.com/mstudiva/Mcav-Annotated-Transcriptome.git
 
 # Create a "KOG-MWU" directory
 
-# Copy mcav_iso2kogClass.tab into the directory
+# Copy Mcavernosa_Cladocopium_iso2kogClass.tab into the directory
 # It is found in my GitHub repository:
 https://github.com/mstudiva/Mcav-Annotated-Transcriptome.git
 
@@ -123,7 +123,7 @@ https://github.com/mstudiva/Mcav-Annotated-Transcriptome.git
 # Copy the 3 template R scripts into the working directory
 # s.threshold.signed.R, tom_calc_signed.R, wgcna_MEanalysis_signed_heavy.R
 # Copy the data4wgcna.RData package from the "DESeq2" directory to "WGCNA"
-# Copy mcav_iso2gene.tab included in this repository to "WGCNA"
+# Copy Mcavernosa_Cladocopium_iso2geneName.tab included in this repository to "WGCNA"
 
 # Run the R script as directed
 
@@ -136,6 +136,6 @@ https://github.com/mstudiva/Mcav-Annotated-Transcriptome.git
 # analysis, gene name, top significant DEGs, WGCNA membership, etc
 
 # Create a "heatmaps" directory
-# Copy the mcav_iso2gene.tab and mcav_iso2kogClass.tab included in this repository to
+# Copy the Mcavernosa_Cladocopium_iso2geneName.tab and Mcavernosa_Cladocopium_iso2kogClass.tab included in this repository to
 # "heatmaps"
 # Copy the data input files as needed for each respective section of code into "heatmaps"

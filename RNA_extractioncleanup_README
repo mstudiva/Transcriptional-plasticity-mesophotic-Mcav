@@ -10,26 +10,26 @@ RNA Extraction from TRIzol
 3.	If TRIzol has separated into two phases upon thawing, or for troubleshooting RNA extraction, perform the following optional step 4.
     a.	You will also need to prep an additional duplicate set of 2.0 mL tubes.
     b.	Vortex the sample tube fully homogenize TRIzol before taking aliquots.
-4.	Spin aliquotted TRIzol at 12,000 x g for 10 min at 4C. This removes polysaccharides and high mw DNA. Transfer supernatant to a new tube.
-5.	Add 300 L of chloroform per 1.5 mL of Trizol.
+4.	Spin aliquotted TRIzol at 12,000 x g for 10 min at 4ºC. This removes polysaccharides and high mw DNA. Transfer supernatant to a new tube.
+5.	Add 300 µl of chloroform per 1.5 mL of Trizol.
 6.	Shake tubes vigorously by hand for 15 sec and incubate at room temp for 2-3 min.
-7.	Centrifuge samples at 12000 x g for 15 min at 4C.
-8.	Into a fresh 2 mL tube, transfer aqueous phase (700L then 200L) and for every 1.5 ml of Trizol, ADD:
+7.	Centrifuge samples at 12000 x g for 15 min at 4ºC.
+8.	Into a fresh 2 mL tube, transfer aqueous phase (700µl then 200µl) and for every 1.5 ml of Trizol, ADD:
     - 375 µL 100 % isopropanol
     - 375 µL high salt solution (0.8 M sodium citrate & 1.2 M of NaCL)
-        **Vortex high salt solution before use	
-9.	Invert tubes 2-3 times by hand to ensure mixing. Incubate samples at room temp for 10 min & then centrifuge at 12000 x g for 10 min at 4C.
-10.	Pour off supernatant & wash pellet with 1.5 mL of cold (-20C) 75% EtOH per 1.5 mL of Trizol.
-11.	Vortex & then centrifuge at 8000 rpm for 5 min at 4C. Gel-like pellet (white/opaque smear) should be visible on the side/bottom of tube.
+        **Vortex high salt solution before use
+9.	Invert tubes 2-3 times by hand to ensure mixing. Incubate samples at room temp for 10 min & then centrifuge at 12000 x g for 10 min at 4ºC.
+10.	Pour off supernatant & wash pellet with 1.5 mL of cold (-20ºC) 75% EtOH per 1.5 mL of Trizol.
+11.	Vortex & then centrifuge at 8000 rpm for 5 min at 4ºC. Gel-like pellet (white/opaque smear) should be visible on the side/bottom of tube.
 12.	Pour off supernatant, quick spin, then remove remaining EtOH by pipetting without touching the pellet. Air dry pellet on Kimwipe for ~15-20 min.
 13.	Dissolve each sample in 50µL nuclease-free water.
-14.	Heat at 55C for 10 min to elute the pellet. Quick spin, then combine samples into one 0.6 mL tube for a total volume of 100 µL.
+14.	Heat at 55ºC for 10 min to elute the pellet. Quick spin, then combine samples into one 0.6 mL tube for a total volume of 100 µL.
 
 ------------------------------
 DNase Treatment using Ambion DNA-free Kit
 1.	Add 0.1 volumes of DNase buffer (10 µL) to each tube and mix.
 2.	Add 1 µL of rDNase I to each tube, quick spin, then flick to mix fully.
-3.	Incubate at 37C for 30 min.
+3.	Incubate at 37ºC for 30 min.
 4.	Add 0.1 volumes of Inactivation Buffer (11 µL) to each tube and mix with the pipet.
 5.	Incubate all samples for at least 2 min, mixing occasionally by flicking.
 6.	Centrifuge at 10,000 x g for 1.5 min at RT.
@@ -46,5 +46,5 @@ LiCl Purification
 4.	Centrifuge at 16,000 x g for 20 min at RT.
 5.	Add 190µL of 80% EtOH to supernatant and pour it out. Add another 190µL of 80% EtOH to rinse. Quick spin, then remove remaining EtOH by pipetting without touching the pellet.
 6.	Remove EtOH. Air dry pellet on Kimwipe for 15-20 minutes.
-7.	Dissolve in 10 µL 10mM Tris buffer. Incubate at 55C for 10min.
+7.	Dissolve in 10 µL 10mM Tris buffer. Incubate at 55ºC for 10min.
 8.	Quantify on Nanodrop for dilution to 100 ng/µL in 10 µL.
