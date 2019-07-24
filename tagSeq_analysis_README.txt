@@ -1,4 +1,4 @@
-# tag-based RNA-Seq analysis, version July 10, 2019
+# tag-based RNA-Seq analysis, version July 23, 2019
 # Created by Michael Studivan (mstudiva@fau.edu)
 
 #------------------------------
@@ -32,7 +32,7 @@
 
 # Save the counts as allcounts.txt and the design table as design.csv
 # or a variation based on experiment and/or transcriptome
-# e.g. I had environmental and transplant experiments sequenced on the same lanes
+# e.g. I had natural and transplant experiments sequenced on the same lanes
 # and host and symbiont transcriptomes, so I had multiple allcounts files
 # "allcounts_enviro_mcav" and "allcounts_enviro_zoox", etc
 
@@ -49,11 +49,11 @@
 # is for two factor
 # As a two factor design, the first factor is your batch factor (like site), and serves as
 # replicates for your second factor, or treatment
-# In the R script example, site is the batch factor and depth is the treatment
-# Ideally, your treatment factor should only have TWO levels (a la control, treatment)
+# In the natural experiment script example, site is the batch factor and depth is the treatment
+# Ideally, your treatment factor should only have TWO levels (ie control, treatment)
 
 # Depending on your experiment size, the rlog transformation may be more suitable than vsd
-# Larger experiments will take too long with rlog, and should use vsd instead
+# Larger experiments (>20 samples) will take too long with rlog, and should use vsd instead
 
 # Anytime an .RData package is created, you can safely start a new R session as needed
 # The "load(name.RData)" function will bring all the associated dataframes back into R
@@ -78,9 +78,9 @@
 git@github.com:z0on/GO_MWU.git
 # Follow the instructions in his README
 # In Step 1, the GO hierarchy file is go.obo
-# the table of GO annotations is mcav_iso2go.tab, found in my Github repository:
+# the table of GO annotations is Mcavernosa_Cladocopium_iso2go.tab, found in my Github repository:
 https://github.com/mstudiva/Mcav-Annotated-Transcriptome.git
-# the -log(p-value) tables were generated at the end of the DESeq2 script
+# the -log(p-value) (lpv) and fold change (fc) tables were generated at the end of the DESeq2 script
 # you should have one _lpv.csv for each of your experimental factors, and one for the
 # interaction
 # you can also compare fc datasets as well for factors with corresponding dataframes
@@ -100,11 +100,12 @@ https://github.com/mstudiva/Mcav-Annotated-Transcriptome.git
 # It is found in my GitHub repository:
 https://github.com/mstudiva/Mcav-Annotated-Transcriptome.git
 
-# Use the template included in this repository
+# Use the template included in this repository (the examples given use fc data, but can be easily changed to lpv)
 # Replace your datasets and factor names with those in your experiment
-# The template follows 3 analyses: full model, effect of site, depth, and interaction on
+# The natural template follows 3 analyses: full model, effect of site, depth, and interaction on
 # expression; comparison of shallow vs mesophotic expression across 4 sites; and comparison
 # of conserved genes across depths among sites
+# The transplant template produces plots for comparison of depth treatments for each time point
 
 #------------------------------
 # Weighted Correlation Network Analysis (WGCNA)
@@ -123,7 +124,7 @@ https://github.com/mstudiva/Mcav-Annotated-Transcriptome.git
 # Copy the 3 template R scripts into the working directory
 # s.threshold.signed.R, tom_calc_signed.R, wgcna_MEanalysis_signed_heavy.R
 # Copy the data4wgcna.RData package from the "DESeq2" directory to "WGCNA"
-# Copy Mcavernosa_Cladocopium_iso2geneName.tab included in this repository to "WGCNA"
+# Copy Mcavernosa_Cladocopium_iso2geneName.tab included in the Mcav-Annotated-Transcriptome repository to "WGCNA"
 
 # Run the R script as directed
 
@@ -132,10 +133,9 @@ https://github.com/mstudiva/Mcav-Annotated-Transcriptome.git
 
 # Once you have any trends in gene expression across your factors identified using the
 # above tests, you can design heatmaps to visually represent the differences
-# Use the heatmapEveryWhichWay R script to create custom heatmaps by: GO analysis, KOG
+# Use the heatmapEveryWhichWay R templates to create custom heatmaps by: GO analysis, KOG
 # analysis, gene name, top significant DEGs, WGCNA membership, etc
 
 # Create a "heatmaps" directory
-# Copy the Mcavernosa_Cladocopium_iso2geneName.tab and Mcavernosa_Cladocopium_iso2kogClass.tab included in this repository to
-# "heatmaps"
+# Copy the Mcavernosa_Cladocopium_iso2geneName.tab and Mcavernosa_Cladocopium_iso2kogClass.tab included in the Mcav-Annotated-Transcriptome repository to "heatmaps" directory
 # Copy the data input files as needed for each respective section of code into "heatmaps"
