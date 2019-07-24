@@ -28,10 +28,12 @@ library(arrayQualityMetrics)
 counts = read.table("allcounts_trans_mcav.txt")
 
 # how many genes we have total?
-nrow(counts) 
+nrow(counts)
+# 17901 for host, 13375 for symbiont
 ncol(counts)
+# 68 samples
 
-# how does the data look? 
+# how does the data look?
 head(counts)
 
 #---------------------
@@ -41,12 +43,14 @@ head(counts)
 keep <- rowSums(counts) >= 10
 countData <- counts[keep,]
 nrow(countData)
+# 9318 for host, 1628 for symbiont
 ncol(countData)
 write.csv(countData, file="countData.csv")
 
-# for WGCNA
-counts4wgcna <- countData
+# for WCGNA: removing all genes with counts <10 in more than 90 % of samples
+counts4wgcna = counts[apply(counts,1,function(x) sum(x<10))<ncol(counts)*0.9,]
 nrow(counts4wgcna)
+# 2189 for host, 105 for symbiont
 ncol(counts4wgcna)
 write.csv(counts4wgcna, file="counts4wgcna.csv")
 
@@ -79,7 +83,7 @@ arrayQualityMetrics(e,intgroup=c("time","depth"),force=T)
 # under Figure 3: Principal Components Analyses, look for any points far away from the rest of the sample cluster
 # use the array number for removal in the following section
 
-# NO OUTLIERS FOUND
+# not removing outliers to preserve experimental design
 # if there were outliers, say, arrays 138, 168, and 170:
 # outs=c(138, 168, 170)
 # countData=countData[,-outs]
@@ -133,14 +137,12 @@ pdf(file="heatmap_trans_mcav.pdf", width=20, height=20)
 pheatmap(cor(vsd))
 dev.off()
 
-# Principal coordinate analysis
+# Principal coordinates analysis
 library(vegan)
 library(rgl)
 library(ape)
 
 conditions=design
-# creates a new column in the conditions dataframe with a combination of sample ID and factors
-conditions$ibyt=paste(conditions[,1],conditions[,3],conditions[,5],conditions[,8],sep=".")
 
 # creating a PCoA eigenvalue matrix
 dds.pcoa=pcoa(dist(t(vsd),method="manhattan")/1000)
@@ -153,32 +155,29 @@ plot(dds.pcoa$values$Relative_eig)
 points(dds.pcoa$values$Broken_stick,col="red",pch=3)
 dev.off()
 # the number of black points above the line of red crosses (random model) corresponds to the number of good PC's
+# 1 PC for host, 3 PCs for symbiont
 
 # plotting PCoA
 pdf(file="PCoA_trans_mcav.pdf", width=12, height=6)
 par(mfrow=c(1,2))
-plot(scores[,1], scores[,2],col=as.numeric(as.factor(conditions$ind)),pch=19, xlab="Coordinate 1", ylab="Coordinate 2", main="Time")
+plot(scores[,1], scores[,2],col=c("#225ea8","#41b6c4","#a1dab4"),pch=c(19,17,21)[as.numeric((as.factor(conditions$depth)))], xlab="Coordinate 1", ylab="Coordinate 2", main="Time")
 # cluster overlay of time
-ordispider(scores,conditions$time,label=T,col=c("#41b6c4","#a1dab4","#225ea8"))
-# legend("bottomleft", legend=c("zero","six","twelve"), fill = c("#225ea8","#41b6c4","#a1dab4"), bty="n")
+ordiellipse(scores, conditions$time, label=F, draw= "polygon", col=c("#225ea8","#41b6c4","#a1dab4"))
+legend("topleft", legend=c("zero","six","twelve"), fill = c("#225ea8","#41b6c4","#a1dab4"), bty="n")
+legend("bottomleft", legend=c("mesophotic","shallow","transplant"), pch=c(19,17,21), bty="n")
 # cluster overlay of depth
-plot(scores[,1], scores[,2],col=as.numeric(as.factor(conditions$ind)),pch=19, xlab="Coordinate 1", ylab="Coordinate 2", main="Depth")
-ordispider(scores,conditions$depth,label=T,col=c("coral","cyan3","khaki3"))
-# legend("bottomleft", legend=c("mesophotic","shallow","transplant"), fill = c("coral","cyan3","khaki3"), bty="n")
+plot(scores[,1], scores[,2],col=c("coral","cyan3","coral"),pch=c(3,13,12)[as.numeric(as.factor(conditions$time))], xlab="Coordinate 1", ylab="Coordinate 2", main="Depth")
+ordiellipse(scores, conditions$depth, label=F, draw= "polygon", col=c("coral","cyan3","coral"))
+legend("bottomleft", legend=c("mesophotic","shallow","transplant"), fill = c("coral","cyan3","coral"), bty="n")
+legend("topleft", legend=c("zero","six","twelve"), pch=c(3,13,12), bty="n")
 dev.off()
-
-# other overlay options
-# ordiellipse(scores,conditions$trt,label=T,draw="polygon",col="grey90",cex=2)
+# this will require some modification in Adobe Illustrator to make the transplant ellipse more transparent
 
 # neighbor-joining tree of samples (based on significant PCo's):
 pdf(file="PCoA_tree.pdf", width=15, height=20)
 tre=nj(dist(scores[,1:4]))
 plot(tre,cex=0.8)
 dev.off()
-
-# interactive 3d plot (package rgl)
-# plot3d(scores[,1], scores[,2], scores[,3],col=as.numeric(as.factor(conditions$time)),type="s",radius=0.5*as.numeric(as.factor(conditions$depth)))
-# this thing is intense
 
 # formal analysis of variance in distance matricies: time and time:depth interaction are significant
 ad=adonis(t(vsd)~time*depth,data=conditions,method="manhattan")
@@ -194,38 +193,90 @@ library(adegenet)
 conditions$time<-factor(conditions$time, levels=c("zero","six","twelve"))
 conditions[order(conditions$time),]
 
-#discrimination of transplant expression by time
 # runs simulations on randomly-chosen datasets of 90% of the total dataset to test the number of PCs to retain
 set.seed(999)
-xvalDapc(t(vsd[,conditions$depth!="transplant"]),conditions$time[conditions$depth!="transplant"], n.rep=100, parallel="multicore", ncpus= 8)
-# This tells us 10 PCs is the most successful in terms of correct assignment, but we need to test again with a smaller range of possible PCs and more reps
-xvalDapc(t(vsd[,conditions$depth!="transplant"]),conditions$time[conditions$depth!="transplant"], n.rep=1000, n.pca=1:20, parallel="multicore", ncpus= 8)
-# once again tells us 10 PCs
+# by depth, excluding transplants
+xvalDapc(t(vsd[,conditions$depth!="transplant"]),conditions$depth[conditions$depth!="transplant"], n.rep=100, parallel="multicore", ncpus= 8)
+# 25 PCs for host, 20 PCs for symbiont
+# need to test again with a smaller range of possible PCs and more reps
+# change the n.pca= statement depending on your target range
+xvalDapc(t(vsd[,conditions$depth!="transplant"]),conditions$depth[conditions$depth!="transplant"], n.rep=1000, n.pca=15:35, parallel="multicore", ncpus= 8)
+# 22 PCs for host, 19 PCs for symbiont
 
-#discrimination of transplant expression by depth
-xvalDapc(t(vsd[,conditions$time!="transplant"]),conditions$depth[conditions$time!="transplant"], n.rep=100, parallel="multicore", ncpus= 8)
-# This tells us 40 PCs is the most successful in terms of correct assignment, but we need to test again with a smaller range of possible PCs and more reps
-xvalDapc(t(vsd[,conditions$time!="transplant"]),conditions$depth[conditions$time!="transplant"], n.rep=1000, n.pca=30:50, parallel="multicore", ncpus= 8)
-# 33 PCs
+# now running the dapc without transplants
+dp.d=dapc(t(vsd[,conditions$depth!="transplant"]),conditions$depth[conditions$depth!="transplant"],n.pca=19, n.da=1)
 
-pdf(file="DAPC_trans_mcav.pdf", width=12, height=6)
+# can we predict depth treatment for the transplants?
+pred.d=predict.dapc(dp.d,newdata=(t(vsd[,conditions$depth=="transplant"])))
+pred.d
+# look at the posterior section for assignments by probability
+
+# creating a new dapc object to add in transplants for plotting
+trans.d=dp.d
+trans.d$ind.coord=pred.d$ind.scores
+trans.d$posterior=pred.d$posterior
+trans.d$assign=pred.d$assign
+trans.d$grp<-as.factor(c("transplant","transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant"))
+
+# now exporting side by side figures of controls vs transplants
+# use Adobe Illustrator to overlay transplants curve onto controls
+pdf(file="DAPC_trans_zoox_depth.pdf", width=12, height=6)
 par(mfrow=c(1,2))
-# run this without n.pca and n.da first, inputting the number of PCs from above and picking the number of discriminant functions by the number of bars in the second plot
-dp.t=dapc(t(vsd[,conditions$depth!="transplant"]),conditions$time[conditions$depth!="transplant"],n.pca=10, n.da=2)
-scatter(dp.t, bg="white",scree.da=FALSE,legend=FALSE,solid=1, col = c("#225ea8","#41b6c4","#a1dab4")) 
-
-# run this without n.pca and n.da first, inputting the number of PCs from above and picking the number of discriminant functions by the number of bars in the second plot
-dp.d=dapc(t(vsd[,conditions$time!="transplant"]),conditions$depth[conditions$time!="transplant"],n.pca=33, n.da=2)
-scatter(dp.d, bg="white",scree.da=FALSE,legend=FALSE,solid=1, col= c("coral","cyan3","khaki3")) 
+scatter(dp.d, bg="white",scree.da=FALSE,legend=TRUE,solid=0.6, col= c("coral","cyan3"))
+scatter(trans.d, bg="white",scree.da=FALSE,legend=FALSE,solid=0.6, col= "coral")
 dev.off()
 
-# can we predict time by transplant trends?
-pred.t=predict.dapc(dp.t,newdata=(t(vsd[,conditions$depth=="transplant"]))) 
-pred.t 
+# by time, excluding transplants
+xvalDapc(t(vsd[,conditions$depth!="transplant"]),conditions$time[conditions$depth!="transplant"], n.rep=100, parallel="multicore", ncpus= 8)
+# 10 PCs for host, 15 PCs for symbiont
+# need to test again with a smaller range of possible PCs and more reps
+# change the n.pca= statement depending on your target range
+xvalDapc(t(vsd[,conditions$depth!="transplant"]),conditions$time[conditions$depth!="transplant"], n.rep=1000, n.pca=1:20, parallel="multicore", ncpus= 8)
+# 10 PCs for host, 14 PCs for symbiont
 
-# can we predict depth by transplant trends?
-pred.d=predict.dapc(dp.d,newdata=(t(vsd[,conditions$depth=="transplant"]))) 
-pred.d 
+# now running the dapc without transplants
+dp.t=dapc(t(vsd[,conditions$depth!="transplant"]),conditions$time[conditions$depth!="transplant"],n.pca=14, n.da=2)
+
+# can we predict depth treatment for the transplants?
+pred.t=predict.dapc(dp.t,newdata=(t(vsd[,conditions$depth=="transplant"])))
+pred.t
+# look at the posterior section for assignments by probability
+
+# exporting for significance testing below
+dpc.d=data.frame(rbind(dp.d$ind.coord,pred.d$ind.scores))
+
+write.csv(dpc.d, "DAPC_trans_zoox_DFA_depth.csv", quote=F)
+# modify the output CSV to add in the respective columns for time and depth conditions
+
+# then reimport
+dpc.d<- read.csv("DAPC_trans_zoox_DFA_depth.csv")
+
+# a little bit of rearranging
+dpc.d$depth<-factor(dpc.d$depth, levels=c("transplant","mesophotic","shallow"))
+dpc.d[order(dpc.d$depth),]
+dpc.d$id<-as.factor(dpc.d$id)
+str(dpc.d)
+
+# testing significance of DFA differences with MCMCglmm
+# install.packages("MCMCglmm")
+library(MCMCglmm)
+
+# sets prior distribution and creates a glm
+prior = list(R = list(V = 1, nu = 0.002), G = list(G1 = list(V=1, nu=0.002,alpha.mu=0, alpha.V=1000)))
+glm.d <-MCMCglmm(LD1~depth,random=~id, family="gaussian", data=dpc.d,prior=prior,nitt=75000,thin=25,burnin=5000)
+summary(glm.d)
+# check to make sure you don't have autocorrelation with the reps (shown as "walks" in model traces)
+plot(glm.d)
+
+# calculating difference in magnitudes of depthmesophotic and depthshallow using sampled sets of parameters
+transDelta=abs(glm.d$Sol[,"depthmesophotic"])-abs(glm.d$Sol[,"depthshallow"])
+# 95% credible interval
+HPDinterval(transDelta)
+
+# MCMC p-value ie are transplants equally different from controls
+if (is.na(table(transDelta<0)[2])) {
+  cat("p <",signif(1/length(transDelta),1))
+} else { cat("p =",signif(table(transDelta<0)[2]/length(transDelta),2)) }
 
 #----------------------
 # FITTING GENE BY GENE MODELS
@@ -287,12 +338,12 @@ depth_m.s
 degs.depth_m.s=row.names(depth_m.s)[depth_m.s$padj<0.1 & !(is.na(depth_m.s$padj))]
 
 depth_t.s=results(dds.depth,contrast=c("depth","transplant","shallow")) # factor depth, level transplant compared to shallow
-summary(depth_t.s) # look at how many DEGs there are and how many low-expressed genes ("low counts") had to be removed
+summary(depth_t.s)
 depth_t.s
 degs.depth_t.s=row.names(depth_t.s)[depth_t.s$padj<0.1 & !(is.na(depth_t.s$padj))]
 
 depth_t.m=results(dds.depth,contrast=c("depth","transplant","mesophotic")) # factor depth, level transplant compared to mesophotic
-summary(depth_t.m) # look at how many DEGs there are and how many low-expressed genes ("low counts") had to be removed
+summary(depth_t.m)
 depth_t.m
 degs.depth_t.m=row.names(depth_t.m)[depth_t.m$padj<0.1 & !(is.na(depth_t.m$padj))]
 
@@ -395,15 +446,7 @@ time0=list("m.s"=degs.zero_m.s,"t.s"=degs.zero_t.s,"t.m"=degs.zero_t.m)
 time6=list("m.s"=degs.six_m.s,"t.s"=degs.six_t.s,"t.m"=degs.six_t.m)
 time12=list("m.s"=degs.twelve_m.s,"t.s"=degs.twelve_t.s,"t.m"=degs.twelve_t.m)
 
-# simple venn
-library(gplots)
-venn(candidates)
-
-#-------------------
-# pretty venn diagram
-
 # install.packages("VennDiagram")
-
 library(VennDiagram)
 
 # overall factors, full model
@@ -493,7 +536,7 @@ grid.draw(time12.venn)
 dev.off()
 
 #-------------------
-# saving data for GO and KOG analysis 
+# saving data for GO and KOG analysis
 load("realModels.RData")
 load("pvals.RData")
 
@@ -519,7 +562,7 @@ head(time.p)
 write.csv(time.p,file="time_lpv.csv",row.names=F,quote=F)
 save(time.p,file="time_lpv.RData")
 
-# time:depth interaction 
+# time:depth interaction
 # signed log p-values: -log(pvalue)* direction:
 head(int)
 source=int[!is.na(int$pvalue),]

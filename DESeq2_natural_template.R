@@ -28,10 +28,12 @@ library(arrayQualityMetrics)
 counts = read.table("allcounts_enviro.txt")
 
 # how many genes we have total?
-nrow(counts) 
+nrow(counts)
+# 17901 for host, 13375 for symbiont
 ncol(counts)
+# 265 samples
 
-# how does the data look? 
+# how does the data look?
 head(counts)
 
 #---------------------
@@ -41,14 +43,9 @@ head(counts)
 keep <- rowSums(counts) >= 10
 countData <- counts[keep,]
 nrow(countData)
+# 12929 for host, 5014 for symbiont
 ncol(countData)
 write.csv(countData, file="countData.csv")
-
-# for WGCNA
-counts4wgcna <- countData
-nrow(counts4wgcna)
-ncol(counts4wgcna)
-write.csv(counts4wgcna, file="counts4wgcna.csv")
 
 # importing a design .csv file
 design = read.csv("design_enviro.csv", head=TRUE)
@@ -78,10 +75,9 @@ arrayQualityMetrics(e,intgroup=c("site","depth"),force=T)
 # under Figure 3: Principal Components Analyses, look for any points far away from the rest of the sample cluster
 # use the array number for removal in the following section
 
-## if there were outliers, say, array 150:
+# if there were outliers, array 150:
 outs=c(150)
 countData=countData[,-outs]
-counts4wgcna=counts4wgcna[,-outs]
 Vsd=Vsd[,-outs]
 # rl=rl[,-outs]
 design=design[-outs,]
@@ -91,11 +87,11 @@ dds = DESeqDataSetFromMatrix(countData=countData, colData=design, design=~ site+
 dds$depth <- factor(dds$depth, levels = c("shallow","mesophotic"))
 
 # save all these dataframes as an Rdata package so you don't need to rerun each time
-save(dds,design,countData,counts4wgcna,Vsd,file="initial.RData")
-# save(dds,design,countData,counts4wgcna,rl,file="initial.RData")
+save(dds,design,countData,Vsd,file="initial.RData")
+# save(dds,design,countData,rl,file="initial.RData")
 
 #---------------------
-# generating normalized variance-stabilized data for PCoA, heatmaps, WGCNA etc
+# generating normalized variance-stabilized data for PCoA, heatmaps, etc
 
 load("initial.RData")
 library(DESeq2)
@@ -109,13 +105,6 @@ snames=paste(colnames(countData),design[,2],design[,3],sep=".")
 # renames the column names
 colnames(vsd)=snames
 save(vsd,design,file="vsd.RData")
-
-# more reduced stabilized dataset for WGCNA
-wg = DESeqDataSetFromMatrix(countData=counts4wgcna, colData=design, design=~ site+depth+site:depth)
-vsd.wg=assay(varianceStabilizingTransformation(wg))
-# vsd.wg=assay(rlog(wg))
-colnames(vsd.wg)=snames
-save(vsd.wg,design,file="data4wgcna.RData")
 
 #-------------------
 # exploring similarities among samples
@@ -134,8 +123,6 @@ library(rgl)
 library(ape)
 
 conditions=design
-# creates a new column in the conditions dataframe with a comination of sample ID and factors
-conditions$ibyt=paste(conditions[,1],conditions[,2],conditions[,3],sep=".")
 
 # creating a PCoA eigenvalue matrix
 dds.pcoa=pcoa(dist(t(vsd),method="manhattan")/1000)
@@ -148,32 +135,28 @@ plot(dds.pcoa$values$Relative_eig)
 points(dds.pcoa$values$Broken_stick,col="red",pch=3)
 dev.off()
 # the number of black points above the line of red crosses (random model) corresponds to the number of good PC's
+# 3 PCs for host, 4 PCs for symbiont
 
 # plotting PCoA
 pdf(file="PCoA_enviro_mcav.pdf", width=12, height=6)
 par(mfrow=c(1,2))
-plot(scores[,1], scores[,2],col=as.numeric(as.factor(conditions$ind)),pch=19, xlab="Coordinate 1", ylab="Coordinate 2", main="Site")
+plot(scores[,1], scores[,2],col=c("#f6e8c3","#5ab4ac", "#8c510a","#01665e"),pch=c(19,17)[as.numeric((as.factor(conditions$depth)))], xlab="Coordinate 1", ylab="Coordinate 2", main="Site")
 # cluster overlay of site
-ordispider(scores,conditions$site,label=T,col=c("#f6e8c3","#5ab4ac", "#8c510a","#01665e"))
-# legend("topright", legend=c("BLZ","WFGB","EFGB","PRG-DRT"), fill = c("#f6e8c3","#01665e", "#5ab4ac","#8c510a"), bty="n")
+ordiellipse(scores, conditions$site, label=F, draw= "polygon", col=c("#f6e8c3","#01665e", "#5ab4ac","#8c510a"))
+legend("topleft", legend=c("BLZ","WFGB","EFGB","PRG-DRT"), fill = c("#f6e8c3","#01665e", "#5ab4ac","#8c510a"), bty="n")
+legend("bottomleft", legend=c("mesophotic","shallow"), pch=c(19,17), bty="n")
 # cluster overlay of depth
-plot(scores[,1], scores[,2],col=as.numeric(as.factor(conditions$ind)),pch=19, xlab="Coordinate 1", ylab="Coordinate 2", main="Depth")
-ordispider(scores,conditions$depth,label=T,col=c("coral","cyan3"))
-# legend("topright", legend=c("mesophotic","shallow"), fill = c("coral","cyan3"), bty="n")
+plot(scores[,1], scores[,2],col=c("coral","cyan3"),pch=c(0,10,6,4)[as.numeric(as.factor(conditions$site))], xlab="Coordinate 1", ylab="Coordinate 2", main="Depth")
+ordiellipse(scores, conditions$depth, label=F, draw= "polygon", col=c("coral","cyan3"))
+legend("bottomleft", legend=c("mesophotic","shallow"), fill = c("coral","cyan3"), bty="n")
+legend("topleft", legend=c("BLZ","WFGB","EFGB","PRG-DRT"), pch=c(0,10,6,4), bty="n")
 dev.off()
-
-# other overlay options
-# ordiellipse(scores,conditions$trt,label=T,draw="polygon",col="grey90",cex=2)
 
 # neighbor-joining tree of samples (based on significant PCo's):
 pdf(file="PCoA_tree.pdf", width=15, height=40)
 tre=nj(dist(scores[,1:4]))
 plot(tre,cex=0.8)
 dev.off()
-
-# interactive 3d plot (package rgl)
-# plot3d(scores[,1], scores[,2], scores[,3],col=as.numeric(as.factor(conditions$site)),type="s",radius=0.5*as.numeric(as.factor(conditions$depth)))
-# this thing is intense
 
 # formal analysis of variance in distance matricies: site and site:depth interaction are significant
 ad=adonis(t(vsd)~site*depth,data=conditions,method="manhattan")
@@ -184,40 +167,44 @@ pdf(file="ANOVA_pie.pdf", width=6, height=6)
 pie(ad$aov.tab$R2[1:4],labels=row.names(ad$aov.tab)[1:4],col=cols,main="site vs depth")
 dev.off()
 
-# DAPC analysis: creating discriminant function to tell shallow from mesophotic, based on factors
+# DAPC analysis: creating discriminant function to tell sites apart, based on shallow from mesophotic
+# cannot test depth here since there are only 2 groups (need to remove 1 for the later predictions)
 library(adegenet)
 
-# discrimination of mesophotic expression by site
 # runs simulations on randomly-chosen datasets of 90% of the total dataset to test the number of PCs to retain
 set.seed(999)
+# by site, excluding mesophotic samples
 xvalDapc(t(vsd[,conditions$depth!="mesophotic"]),conditions$site[conditions$depth!="mesophotic"], n.rep=100, parallel="multicore", ncpus= 8)
-# pick the value given for 'Number of PCs Achieving Lowest MSE'
-# This tells us 30 PCs is the most successful in terms of correct assignment, but we need to test again with a smaller range of possible PCs and more reps
-xvalDapc(t(vsd[,conditions$depth!="mesophotic"]),conditions$site[conditions$depth!="mesophotic"], n.rep=1000, n.pca=20:40, parallel="multicore", ncpus= 8)
-# 27 PCs
+# 20 PCs for host, 60 PCs for symbiont
+# need to test again with a smaller range of possible PCs and more reps
+# change the n.pca= statement depending on your target range
+xvalDapc(t(vsd[,conditions$depth!="mesophotic"]),conditions$site[conditions$depth!="mesophotic"], n.rep=1000, n.pca=10:30, parallel="multicore", ncpus= 8)
+# 23 PCs for host, 60 PCs for symbiont
 
-#discrimination of transplant expression by depth
-xvalDapc(t(vsd[,conditions$site!="mesophotic"]),conditions$depth[conditions$site!="mesophotic"], n.rep=100, parallel="multicore", ncpus= 8)
-# This tells us 60 PCs is the most successful in terms of correct assignment, but we need to test again with a smaller range of possible PCs and more reps
-xvalDapc(t(vsd[,conditions$site!="mesophotic"]),conditions$depth[conditions$site!="mesophotic"], n.rep=1000, n.pca=50:70, parallel="multicore", ncpus= 8)
-# 50 PCs
+# now running the dapc without transplants
+dp.s=dapc(t(vsd[,conditions$depth!="mesophotic"]),conditions$site[conditions$depth!="mesophotic"],n.pca=23, n.da=3)
 
-pdf(file="DAPC_enviro_mcav.pdf", width=12, height=6)
+# can we predict site for the mesophotic samples based on patterns among the shallow samples?
+pred.s=predict.dapc(dp.s,newdata=(t(vsd[,conditions$depth=="mesophotic"])))
+pred.s
+# look at the posterior section for assignments by probability
+
+# creating a new dapc object to add in mesophotic corals for plotting
+dp.meso=dp.s
+dp.meso$ind.coord=pred.s$ind.scores
+dp.meso$posterior=pred.s$posterior
+dp.meso$assign=pred.s$assign
+# for host
+dp.meso$grp<-as.factor(c("BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","WFGB","WFGB","WFGB","WFGB","WFGB","WFGB","EFGB","WFGB","WFGB","WFGB","WFGB","EFGB","WFGB","WFGB","WFGB","WFGB","WFGB","WFGB","WFGB","WFGB","EFGB","WFGB","EFGB","EFGB","EFGB","WFGB","EFGB","EFGB","WFGB","WFGB","WFGB","WFGB","EFGB","EFGB","WFGB","EFGB","WFGB","EFGB","WFGB","WFGB","EFGB","EFGB","WFGB","EFGB","EFGB","WFGB","WFGB","EFGB","WFGB","EFGB","EFGB","EFGB","EFGB","WFGB"))
+# for symbionts
+# dp.meso$grp<-as.factor(c("BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","BLZ","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","PRG-DRT","WFGB","WFGB","WFGB","WFGB","WFGB","EFGB","WFGB","WFGB","WFGB","WFGB","EFGB","WFGB","WFGB","WFGB","WFGB","WFGB","WFGB","WFGB","WFGB","EFGB","WFGB","EFGB","EFGB","EFGB","WFGB","EFGB","EFGB","WFGB","WFGB","WFGB","WFGB","EFGB","EFGB","EFGB","WFGB","EFGB","WFGB","WFGB","EFGB","EFGB","WFGB","EFGB","EFGB","WFGB","WFGB","EFGB","WFGB","EFGB","EFGB","EFGB","EFGB","WFGB"))
+
+# now exporting side by side figures of shallow vs mesophotic
+pdf(file="DAPC_enviro_mcav_site.pdf", width=12, height=6)
 par(mfrow=c(1,2))
-dp.s=dapc(t(vsd[,conditions$depth!="mesophotic"]),conditions$site[conditions$depth!="mesophotic"],n.pca=27, n.da=3)
-scatter(dp.s, bg="white",scree.da=FALSE,legend=FALSE, solid=1, col = c("#f6e8c3","#5ab4ac","#8c510a","#01665e")) #discrimination of mesophotic expression by site
-
-dp.d=dapc(t(vsd[,conditions$site!="mesophotic"]),conditions$depth[conditions$site!="mesophotic"],n.pca=50, n.da=1)
-scatter(dp.d, bg="white",scree.da=FALSE,legend=TRUE,posi.leg="topleft", solid=.5, col= c("coral","cyan3")) #discrimination of mesophotic expression by depth 
+scatter(dp.s, bg="white",scree.da=FALSE,legend=TRUE,solid=0.6, col= c("#f6e8c3","#01665e", "#5ab4ac","#8c510a"))
+scatter(dp.meso, bg="white",scree.da=FALSE,legend=FALSE,solid=0.6, col= c("#f6e8c3","#01665e", "#5ab4ac","#8c510a"))
 dev.off()
-
-# can we predict site by mesophotic trends?
-pred.s=predict.dapc(dp.s,newdata=(t(vsd[,conditions$depth=="mesophotic"]))) 
-pred.s 
-
-# can we predict depth by mesophotic trends?
-pred.d=predict.dapc(dp.d,newdata=(t(vsd[,conditions$depth=="mesophotic"]))) 
-pred.d 
 
 #----------------------
 # FITTING GENE BY GENE MODELS
@@ -330,7 +317,6 @@ WFGB.d
 degs.WFGB=row.names(WFGB.d)[WFGB.d$padj<0.1 & !(is.na(WFGB.d$padj))]
 
 # is the depth effect different across sites?
-
 CBC.EFGB.d=results(dds, name="siteEFGB.depthmesophotic")
 summary(CBC.EFGB.d)
 CBC.EFGB.d
@@ -391,15 +377,7 @@ candidates=list("depth"=degs.depth,"site"=degs.site, "interaction"=degs.int)
 # DEGs across depths within site - are some genes conserved?
 sitedepth=list("CBC"=degs.CBC,"PRTER"=degs.PRTER,"WFGB"=degs.WFGB,"EFGB"=degs.EFGB)
 
-# simple venn
-library(gplots)
-venn(candidates)
-
-#-------------------
-# pretty venn diagram
-
 # install.packages("VennDiagram")
-
 library(VennDiagram)
 
 # overall factors, full model
@@ -446,7 +424,7 @@ grid.draw(sitedepth.venn)
 dev.off()
 
 #-------------------
-# saving data for GO and KOG analysis 
+# saving data for GO and KOG analysis
 load("realModels.RData")
 load("pvals.RData")
 
@@ -470,7 +448,6 @@ save(depth.p,file="depth_lpv.RData")
 
 # site response
 # since DESeq2 was designed for 2 factor designs (batch vs treatment), only the treatment fold change data are relevant
-
 # signed log p-values: -log(pvalue)* direction:
 head(site)
 source=site[!is.na(site$pvalue),]
@@ -481,7 +458,7 @@ head(site.p)
 write.csv(site.p,file="site_lpv.csv",row.names=F,quote=F)
 save(site.p,file="site_lpv.RData")
 
-# site:depth interaction 
+# site:depth interaction
 # signed log p-values: -log(pvalue)* direction:
 head(int)
 source=int[!is.na(int$pvalue),]
@@ -514,7 +491,6 @@ head(CBC.p)
 write.csv(CBC.p,file="CBC_lpv.csv",row.names=F,quote=F)
 save(CBC.p,file="CBC_lpv.RData")
 
-
 # depth response within EFGB
 # log2 fold changes:
 head(EFGB.d)
@@ -533,7 +509,6 @@ head(EFGB.p)
 write.csv(EFGB.p,file="EFGB_lpv.csv",row.names=F,quote=F)
 save(EFGB.p,file="EFGB_lpv.RData")
 
-
 # depth response within PRTER
 # log2 fold changes:
 head(PRTER.d)
@@ -551,7 +526,6 @@ PRTER.p$lpv[source$stat<0]= PRTER.p$lpv[source$stat<0]*-1
 head(PRTER.p)
 write.csv(PRTER.p,file="PRTER_lpv.csv",row.names=F,quote=F)
 save(PRTER.p,file="PRTER_lpv.RData")
-
 
 # depth response within WFGB
 # log2 fold changes:
@@ -580,74 +554,128 @@ load("pvals.RData")
 library(plyr)
 
 # creates dataframe of significant DEGs for each site, one each for lfc and lpv
-# run each of these twice with the corresponding lines uncommented to export lfc and lpv datasets
-source=CBC.d[CBC.d$padj<0.1 & !(is.na(CBC.d$padj)),]
-CBC=data.frame("gene"=row.names(source))
-#CBC$lfc=source[,"log2FoldChange"]
-CBC$lpv=-log(source[,"pvalue"],10)
-CBC$lpv[source$stat<0]= CBC$lpv[source$stat<0]*-1
-head(CBC)
+# first section is for lpv
+source=BLZ.d[BLZ.d$padj<0.1 & !(is.na(BLZ.d$padj)),]
+BLZ=data.frame("gene"=row.names(source))
+BLZ$lpv=-log(source[,"pvalue"],10)
+BLZ$lpv[source$stat<0]= BLZ$lpv[source$stat<0]*-1
+head(BLZ)
 
 source=EFGB.d[EFGB.d$padj<0.1 & !(is.na(EFGB.d$padj)),]
 EFGB=data.frame("gene"=row.names(source))
-#EFGB$lfc=source[,"log2FoldChange"]
 EFGB$lpv=-log(source[,"pvalue"],10)
 EFGB$lpv[source$stat<0]= EFGB$lpv[source$stat<0]*-1
 head(EFGB)
 
-source=PRTER.d[PRTER.d$padj<0.1 & !(is.na(PRTER.d$padj)),]
-PRTER=data.frame("gene"=row.names(source))
-#PRTER$lfc=source[,"log2FoldChange"]
-PRTER$lpv=-log(source[,"pvalue"],10)
-PRTER$lpv[source$stat<0]= PRTER$lpv[source$stat<0]*-1
-head(PRTER)
+source=PRG_DRT.d[PRG_DRT.d$padj<0.1 & !(is.na(PRG_DRT.d$padj)),]
+PRG_DRT=data.frame("gene"=row.names(source))
+PRG_DRT$lpv=-log(source[,"pvalue"],10)
+PRG_DRT$lpv[source$stat<0]= PRG_DRT$lpv[source$stat<0]*-1
+head(PRG_DRT)
 
 source=WFGB.d[WFGB.d$padj<0.1 & !(is.na(WFGB.d$padj)),]
 WFGB=data.frame("gene"=row.names(source))
-#WFGB$lfc=source[,"log2FoldChange"]
 WFGB$lpv=-log(source[,"pvalue"],10)
 WFGB$lpv[source$stat<0]= WFGB$lpv[source$stat<0]*-1
 head(WFGB)
 
-# finds and outputs common genes and associated DEG reponses (lfc or lpv) across all sites
-commongenes<- join_all(list(CBC,EFGB,PRTER,WFGB), by="gene", type="inner")
-head(commongenes)
-names(commongenes)<- c("gene","CBC","EFGB","PRTER","WFGB")
+# finds and outputs common genes and associated DEG reponses across all sites
+commongenes<- join_all(list(BLZ,EFGB,PRG_DRT,WFGB), by="gene", type="inner")
+str(commongenes)
+names(commongenes)<- c("gene","BLZ","EFGB","PRG-DRT","WFGB")
+write.csv(commongenes, file="commongenes_lpv.csv")
 
-# takes the corresponding site column of lfc or lpv for export
-# run each of these twice with the corresponding lines uncommented to export lfc and lpv datasets
-CBC.common=data.frame("gene"=commongenes$gene)
-#CBC.common$lfc= commongenes[,"CBC"]
-CBC.common$lpv= commongenes[,"CBC"]
-CBC.common
-#write.csv(CBC.common,file="CBC_common_lfc.csv",row.names=F,quote=F)
-#save(CBC.common,file="CBC_common_lfc.RData")
-write.csv(CBC.common,file="CBC_common_lpv.csv",row.names=F,quote=F)
-save(CBC.common,file="CBC_common_lpv.RData")
+# takes the corresponding site column for export
+BLZ.common=data.frame("gene"=commongenes$gene)
+BLZ.common$lpv= commongenes[,"BLZ"]
+BLZ.common
+write.csv(BLZ.common,file="BLZ_common_lpv.csv",row.names=F,quote=F)
+save(BLZ.common,file="BLZ_common_lpv.RData")
 
 EFGB.common=data.frame("gene"=commongenes$gene)
-#EFGB.common$lfc= commongenes[,"EFGB"]
 EFGB.common$lpv= commongenes[,"EFGB"]
 EFGB.common
-#write.csv(EFGB.common,file="EFGB_common_lfc.csv",row.names=F,quote=F)
-#save(EFGB.common,file="EFGB_common_lfc.RData")
 write.csv(EFGB.common,file="EFGB_common_lpv.csv",row.names=F,quote=F)
 save(EFGB.common,file="EFGB_common_lpv.RData")
 
-PRTER.common=data.frame("gene"=commongenes$gene)
-#PRTER.common$lfc= commongenes[,"PRTER"]
-PRTER.common$lpv= commongenes[,"PRTER"]
-PRTER.common
-#write.csv(PRTER.common,file="PRTER_common_lfc.csv",row.names=F,quote=F)
-#save(PRTER.common,file="PRTER_common_lfc.RData")
-write.csv(PRTER.common,file="PRTER_common_lpv.csv",row.names=F,quote=F)
-save(PRTER.common,file="PRTER_common_lpv.RData")
+PRG_DRT.common=data.frame("gene"=commongenes$gene)
+PRG_DRT.common$lpv= commongenes[,"PRG-DRT"]
+PRG_DRT.common
+write.csv(PRG_DRT.common,file="PRG-DRT_common_lpv.csv",row.names=F,quote=F)
+save(PRG_DRT.common,file="PRG-DRT_common_lpv.RData")
 
 WFGB.common=data.frame("gene"=commongenes$gene)
-#WFGB.common$lfc= commongenes[,"WFGB"]
 WFGB.common$lpv= commongenes[,"WFGB"]
 WFGB.common
-#write.csv(WFGB.common,file="WFGB_common_lfc.csv",row.names=F,quote=F)
-#save(WFGB.common,file="WFGB_common_lfc.RData")
 write.csv(WFGB.common,file="WFGB_common_lpv.csv",row.names=F,quote=F)
 save(WFGB.common,file="WFGB_common_lpv.RData")
+
+#----------------------
+# now fc
+source=BLZ.d[BLZ.d$padj<0.1 & !(is.na(BLZ.d$padj)),]
+BLZ=data.frame("gene"=row.names(source))
+BLZ$lfc=source[,"log2FoldChange"]
+head(BLZ)
+
+source=EFGB.d[EFGB.d$padj<0.1 & !(is.na(EFGB.d$padj)),]
+EFGB=data.frame("gene"=row.names(source))
+EFGB$lfc=source[,"log2FoldChange"]
+head(EFGB)
+
+source=PRG_DRT.d[PRG_DRT.d$padj<0.1 & !(is.na(PRG_DRT.d$padj)),]
+PRG_DRT=data.frame("gene"=row.names(source))
+PRG_DRT$lfc=source[,"log2FoldChange"]
+head(PRG_DRT)
+
+source=WFGB.d[WFGB.d$padj<0.1 & !(is.na(WFGB.d$padj)),]
+WFGB=data.frame("gene"=row.names(source))
+WFGB$lfc=source[,"log2FoldChange"]
+head(WFGB)
+
+# finds and outputs common genes and associated DEG reponses across all sites
+commongenes<- join_all(list(BLZ,EFGB,PRG_DRT,WFGB), by="gene", type="inner")
+str(commongenes)
+names(commongenes)<- c("gene","BLZ","EFGB","PRG-DRT","WFGB")
+write.csv(commongenes, file="commongenes_fc.csv")
+
+# takes the corresponding site column for export
+BLZ.common=data.frame("gene"=commongenes$gene)
+BLZ.common$lfc= commongenes[,"BLZ"]
+BLZ.common
+write.csv(BLZ.common,file="BLZ_common_fc.csv",row.names=F,quote=F)
+save(BLZ.common,file="BLZ_common_fc.RData")
+
+EFGB.common=data.frame("gene"=commongenes$gene)
+EFGB.common$lfc= commongenes[,"EFGB"]
+EFGB.common
+write.csv(EFGB.common,file="EFGB_common_fc.csv",row.names=F,quote=F)
+save(EFGB.common,file="EFGB_common_fc.RData")
+
+PRG_DRT.common=data.frame("gene"=commongenes$gene)
+PRG_DRT.common$lfc= commongenes[,"PRG-DRT"]
+PRG_DRT.common
+write.csv(PRG_DRT.common,file="PRG-DRT_common_fc.csv",row.names=F,quote=F)
+save(PRG_DRT.common,file="PRG-DRT_common_fc.RData")
+
+WFGB.common=data.frame("gene"=commongenes$gene)
+WFGB.common$lfc= commongenes[,"WFGB"]
+WFGB.common
+write.csv(WFGB.common,file="WFGB_common_fc.csv",row.names=F,quote=F)
+save(WFGB.common,file="WFGB_common_fc.RData")
+
+#------------------------
+# exporting dataset of common genes with vsd normalized expression
+# first, export the vsd matrix to csv, then reimport to generate a dataframe with gene name as a true column
+write.csv(vsd,file="vsd.csv")
+vsd.common<- read.csv("vsd.csv", head=TRUE)
+colnames(vsd.common)[1]<- "gene"
+str(vsd.common)
+
+# next, joins commongenes and vsd.common datasets to produce a dataframe of the conserved genes across all sites
+# this includes each sample, so you can look at individual responses across the conserved genes
+common<- join_all(list(commongenes,vsd.common), by="gene", type="inner")
+str(common)
+head(commongenes)
+head(common)
+# double check the isogroup numbers line up properly
+write.csv(common, file="commongenes_vsd.csv")
