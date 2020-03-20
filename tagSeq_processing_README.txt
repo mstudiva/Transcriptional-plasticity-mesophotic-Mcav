@@ -1,5 +1,5 @@
-# Tag-based RNA-seq reads processing pipeline, version May 2, 2019
-# Created by Misha Matz (matz@utexas.edu), modified by Michael Studivan (mstudiva@fau.edu)
+# Tag-based RNA-seq reads processing pipeline, version March 20, 2020
+# Created by Misha Matz (matz@utexas.edu), modified by Michael Studivan (studivanms@gmail.com)
 # for use on the FAU KoKo HPC
 
 # log onto cluster
@@ -8,14 +8,12 @@ ssh mstudiva@koko-login.fau.edu
 
 #------------------------------
 # BEFORE STARTING, replace, in this whole file:
-#	- mstudiva@fau.edu by your actual email;
+#	- studivanms@gmail.com by your actual email;
 #	- mstudiva with your KoKo user name.
 
-# The idea is to copy the chunks separated by empty lines below and paste them into your cluster
-# terminal window consecutively.
+# The idea is to copy the chunks separated by empty lines below and paste them into your cluster terminal window consecutively.
 
-# The lines beginning with hash marks (#) are explanations and additional instructions -
-# please make sure to read them before copy-pasting.
+# The lines beginning with hash marks (#) are explanations and additional instructions – please make sure to read them before copy-pasting.
 
 #------------------------------
 # installing RNA-seq scripts and setting up the workspace
@@ -83,6 +81,7 @@ module load openmpi/gcc
 module load launcher
 module load fastx_toolkit
 module load bowtie2/2.3.0
+module load blast
 
 # paste this line in SECTION 2:
 export PATH="$HOME/bin/:$PATH"
@@ -123,7 +122,7 @@ echo 'gdrive download 0B40lh4qYLpPVRUc0cmhsTjdJSk0' >> wget
 echo 'gdrive download 0B40lh4qYLpPVcm00RVp3SlVwT0E' >> wget
 echo 'gdrive download 0B40lh4qYLpPVVm5OdHdSMTdBX0U' >> wget
 
-launcher_creator.py -j wget -n wget -q shortq7 -t 2:00:00 -e mstudiva@fau.edu
+launcher_creator.py -j wget -n wget -q shortq7 -t 6:00:00 -e studivanms@gmail.com
 sbatch wget.slurm
 
 echo 'unzip ACB9MJANXX.zip' > unzip
@@ -131,7 +130,7 @@ echo 'unzip ACB32LANXX.zip' >> unzip
 echo 'unzip BCB5VAANXX.zip' >> unzip
 echo 'unzip BCB9MKANXX.zip' >> unzip
 
-launcher_creator.py -j unzip -n unzip -q shortq7 -t 2:00:00 -e mstudiva@fau.edu
+launcher_creator.py -j unzip -n unzip -q shortq7 -t 6:00:00 -e studivanms@gmail.com
 sbatch unzip.slurm
 
 # move any fastq files from subdirectories, then delete the subdirectories
@@ -149,7 +148,7 @@ cd ~/tagseq/
 
 # creating and launching a cluster job to unzip all files:
 ls *.gz | perl -pe 's/(\S+)/gunzip $1/' >gunz
-launcher_creator.py -j gunz -n gunz -q shortq7 -t 2:00:00 -e mstudiva@fau.edu
+launcher_creator.py -j gunz -n gunz -q shortq7 -t 6:00:00 -e studivanms@gmail.com
 sbatch gunz.slurm
 
 # check status of your job (PD : pending, not enough nodes; R : running; nothing printed on the screen - complete)
@@ -163,7 +162,7 @@ ll *.fastq | wc -l
 # ngs_concat.pl commonTextInFastqFilenames  "FilenameTextImmediatelyBeforeSampleID(.+)FilenameTextImmediatelyAfterSampleID"
 
 echo "ngs_concat.pl 'MS_' '(.+)_[ATCG]{6}'" > concat
-launcher_creator.py -j concat -n concat -q shortq7 -t 2:00:00 -e mstudiva@fau.edu
+launcher_creator.py -j concat -n concat -q shortq7 -t 6:00:00 -e studivanms@gmail.com
 sbatch concat.slurm
 
 # this one-liner replaces any sample numbers with the three digit version
@@ -186,7 +185,7 @@ mv *.fastq ~/backup/
 
 # to count the number of reads in all samples
 echo "countreads_raw.pl > countreads_raw.txt" > count
-launcher_creator.py -j count -n count -q shortq7 -t 2:00:00 -e mstudiva@fau.edu
+launcher_creator.py -j count -n count -q shortq7 -t 6:00:00 -e studivanms@gmail.com
 sbatch count.slurm
 
 #------------------------------
@@ -194,7 +193,7 @@ sbatch count.slurm
 
 # creating and launching the cleaning process for all files in the same time:
 ls *fq | perl -pe 's/(\S+)/rnaseq_clipper_MS\.pl $1 \| fastx_clipper -a AAAAAAAA -l 20 -Q33 \| fastx_clipper -a AGATCGGAAG -l 20 -Q33 \| fastq_quality_filter -q 20 -p 90 -Q33 >$1.trim/' >clean
-launcher_creator.py -j clean -n clean -t 2:00:00 -q shortq7 -e mstudiva@fau.edu
+launcher_creator.py -j clean -n clean -t 6:00:00 -q shortq7 -e studivanms@gmail.com
 sbatch clean.slurm
 
 # how the job is doing?
@@ -227,7 +226,7 @@ mv *.fq ~/backup/
 
 # to count the number of reads in trimmed samples
 echo "countreads_trim.pl > countreads_trim.txt" > count_trim
-launcher_creator.py -j count_trim -n count_trim -q shortq7 -t 2:00:00 -e mstudiva@fau.edu
+launcher_creator.py -j count_trim -n count_trim -q shortq7 -t 6:00:00 -e studivanms@gmail.com
 sbatch count_trim.slurm
 
 #------------------------------
@@ -247,7 +246,7 @@ cd db
 
 # creating bowtie2 index for your transcriptome:
 echo 'bowtie2-build Mcavernosa_Cladocopium.fasta Mcavernosa_Cladocopium' > btb
-launcher_creator.py -j btb -n btb -q shortq7 -t 2:00:00 -e mstudiva@fau.edu
+launcher_creator.py -j btb -n btb -q shortq7 -t 6:00:00 -e studivanms@gmail.com
 sbatch btb.slurm
 
 #------------------------------
@@ -260,7 +259,7 @@ srun iRNAseq_bowtie2map.pl "trim$" ~/db/Mcavernosa_Cladocopium > maps
 # If you have a file named count_trim, you need to edit maps to remove a line
 nano maps
 # find the line with count_trim, then Ctrl+K to cut, then save
-launcher_creator.py -j maps -n maps -q shortq7 -t 2:00:00 -e mstudiva@fau.edu
+launcher_creator.py -j maps -n maps -q shortq7 -t 6:00:00 -e studivanms@gmail.com
 sbatch maps.slurm
 
 # how is the job?
@@ -287,7 +286,7 @@ nano alignrate.txt
 cp ~/annotate/Mcavernosa_Cladocopium_seq2iso.tab ~/db/
 
 samcount_launch_bt2.pl '\.sam$' /home/mstudiva/db/Mcavernosa_Cladocopium_seq2iso.tab > sc
-launcher_creator.py -j sc -n sc -q shortq7 -t 2:00:00 -e mstudiva@fau.edu
+launcher_creator.py -j sc -n sc -q shortq7 -t 6:00:00 -e studivanms@gmail.com
 sbatch sc.slurm
 
 # check on the job
@@ -324,9 +323,7 @@ pwd
 cd /path/to/local/directory
 scp mstudiva@koko-login.fau.edu:~/path/to/HPC/directory/*.txt .
 
-# copy the file from KoKo using scp (in WinSCP, just paste the path you just copied
-# into an appropriate slot (should be self-evident) and drag the allcounts.txt file
-# to your local directory)
+# copy the file from KoKo using scp (in WinSCP, just paste the path you just copied into an appropriate slot (should be self-evident) and drag the allcounts.txt file to your local directory)
 
 # DONE! Next, we will be using R to make sense of the counts...
 # BUT FIRST, read tagSeq_analysis_README.txt for the next steps

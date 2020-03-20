@@ -217,10 +217,11 @@ trans.d$ind.coord=pred.d$ind.scores
 trans.d$posterior=pred.d$posterior
 trans.d$assign=pred.d$assign
 trans.d$grp<-as.factor(c("transplant","transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant", "transplant"))
+# same for symbionts
 
 # now exporting side by side figures of controls vs transplants
 # use Adobe Illustrator to overlay transplants curve onto controls
-pdf(file="DAPC_trans_zoox_depth.pdf", width=12, height=6)
+pdf(file="DAPC_trans_mcav_depth.pdf", width=12, height=6)
 par(mfrow=c(1,2))
 scatter(dp.d, bg="white",scree.da=FALSE,legend=TRUE,solid=0.6, col= c("coral","cyan3"))
 scatter(trans.d, bg="white",scree.da=FALSE,legend=FALSE,solid=0.6, col= "coral")
@@ -245,11 +246,11 @@ pred.t
 # exporting for significance testing below
 dpc.d=data.frame(rbind(dp.d$ind.coord,pred.d$ind.scores))
 
-write.csv(dpc.d, "DAPC_trans_zoox_DFA_depth.csv", quote=F)
+write.csv(dpc.d, "DAPC_trans_mcav_DFA_depth.csv", quote=F)
 # modify the output CSV to add in the respective columns for time and depth conditions
 
 # then reimport
-dpc.d<- read.csv("DAPC_trans_zoox_DFA_depth.csv")
+dpc.d<- read.csv("DAPC_trans_mcav_DFA_depth.csv")
 
 # a little bit of rearranging
 dpc.d$depth<-factor(dpc.d$depth, levels=c("transplant","mesophotic","shallow"))
