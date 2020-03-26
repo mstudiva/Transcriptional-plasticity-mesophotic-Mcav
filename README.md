@@ -1,7 +1,6 @@
-# tagseq modified scripts
+# Transcriptional plasticity of mesophotic corals among natural populations and transplants of Montastraea cavernosa in the Gulf of Mexico and Belize
 
-This is a collection of scripts developed by Misha Matz (matz@utexas.edu) for tag-based RNA-seq, 
-and modified by Michael Studivan (mstudiva@fau.edu) for use with Eli Meyer's lab protocol.
+This is a collection of bioinformatics pipelines and scripts originally developed by Misha Matz (matz@utexas.edu) for tag-based RNA-seq, and modified by Michael Studivan (studivanms@gmail.com) for use with Eli Meyer's lab protocol.
 
 #------------------------------
 countreads_raw.pl
