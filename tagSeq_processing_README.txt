@@ -1,4 +1,4 @@
-# Tag-based RNA-seq reads processing pipeline, version March 20, 2020
+# Tag-based RNA-seq reads processing pipeline, version March 26, 2020
 # Created by Misha Matz (matz@utexas.edu), modified by Michael Studivan (studivanms@gmail.com)
 # for use on the FAU KoKo HPC
 
@@ -43,8 +43,8 @@ rm -rf tag-based_RNAseq
 # remove the TACC version of launcher_creator.py from the bin directory
 rm launcher_creator.py
 
-# clone github repository with modified scripts for use with M. cavernosa/Cladocopium sp. and Eli Meyer's library prep
-git clone https://github.com/mstudiva/tagseq-modified-scripts.git
+# clone github repository with modified scripts for use with M. cavernosa/Cladocopium spp. and Eli Meyer's library prep
+git clone https://github.com/mstudiva/Transcriptional-plasticity-mesophotic-Mcav.git
 
 # move files from subdirectory and delete empty subdirectory
 mv tagseq-modified-scripts/* .
@@ -235,7 +235,7 @@ sbatch count_trim.slurm
 # there are already-annotated M. cavernosa and Cladocopium transcriptomes on github and Dropbox
 mkdir annotate
 cd annotate
-git clone https://github.com/mstudiva/Mcav-Annotated-Transcriptome.git
+git clone https://github.com/mstudiva/Mcav-Cladocopium-Annotated-Transcriptome.git
 mv Mcav-Annotated-Transcriptome/* .
 rm -rf Mcav-Annotated-Transcriptome
 
